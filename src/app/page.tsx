@@ -305,8 +305,28 @@ function ConnectScreen({
           </div>
         </div>
         <aside className="border border-zinc-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-zinc-950">Local setup</h3>
-          <dl className="mt-4 space-y-4 text-sm">
+          <h3 className="text-sm font-semibold text-zinc-950">
+            First-time setup
+          </h3>
+          <ol className="mt-4 space-y-3 text-sm text-zinc-700">
+            <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+              <span className="font-semibold text-zinc-950">1</span>
+              <span>Create or open a WHOOP developer app.</span>
+            </li>
+            <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+              <span className="font-semibold text-zinc-950">2</span>
+              <span>Add the redirect URI below to the app.</span>
+            </li>
+            <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+              <span className="font-semibold text-zinc-950">3</span>
+              <span>Set the required environment variables on this server.</span>
+            </li>
+            <li className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+              <span className="font-semibold text-zinc-950">4</span>
+              <span>Restart or redeploy, then connect your WHOOP account.</span>
+            </li>
+          </ol>
+          <dl className="mt-5 space-y-4 border-t border-zinc-200 pt-4 text-sm">
             <div>
               <dt className="font-medium text-zinc-500">Redirect URI</dt>
               <dd className="mt-1 break-all font-mono text-xs text-zinc-900">
@@ -326,6 +346,10 @@ function ConnectScreen({
               </dd>
             </div>
           </dl>
+          <p className="mt-4 text-xs leading-5 text-zinc-500">
+            The Agentic DJ appears after connection and uses the freshest WHOOP
+            heart-rate signal available through the API.
+          </p>
         </aside>
       </section>
     </Shell>
