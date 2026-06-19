@@ -16,7 +16,9 @@ import { Children } from "react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
+import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
 import { getConfigStatus, getScopeParam } from "@/lib/whoop/config";
 import { getRecentWhoopData } from "@/lib/whoop/client";
 import {
@@ -457,6 +459,8 @@ function Dashboard({ data, range }: { data: WhoopDashboardData; range: number })
           tone="zinc"
         />
       </section>
+
+      <AgenticDj songs={DJ_SONG_CATALOG} />
 
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="border border-zinc-200 bg-white p-5">

@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { HeartRateSignal } from "@/lib/dj/types";
 import { WHOOP_API_BASE_URL } from "./config";
 import type {
   Cycle,
@@ -174,3 +175,82 @@ export async function getRecentWhoopData(
   };
 }
 
+function latestByUpdatedAt<T extends { updated_at: string }>(records: T[]) {
+  return [...records].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )[0];
+}
+
+export async function getLatestHeartRateSignal(
+  accessToken: string,
+): Promise<HeartRateSignal | null> {
+  const end = new Date();
+  const start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const query = {
+    limit: 10,
+    start: start.toISOString(),
+    end: end.toISOString(),
+  };
+
+  const [workouts, cycles, recoveries] = await Promise.all([
+    fetchWhoop<PaginatedWhoopResponse<Workout>>(
+      accessToken,
+      "/v2/activity/workout",
+      query,
+    ),
+    fetchWhoop<PaginatedWhoopResponse<Cycle>>(accessToken, "/v2/cycle", query),
+    fetchWhoop<PaginatedWhoopResponse<Recovery>>(
+      accessToken,
+      "/v2/recovery",
+      query,
+    ),
+  ]);
+
+  const workout = latestByUpdatedAt(
+    (workouts.records ?? []).filter(
+      (record) => record.score?.average_heart_rate,
+    ),
+  );
+
+  if (workout?.score?.average_heart_rate) {
+    return {
+      bpm: workout.score.average_heart_rate,
+      source: "workout_average",
+      label: "Latest workout average HR",
+      sampledAt: workout.updated_at,
+      isLive: false,
+    };
+  }
+
+  const cycle = latestByUpdatedAt(
+    (cycles.records ?? []).filter((record) => record.score?.average_heart_rate),
+  );
+
+  if (cycle?.score?.average_heart_rate) {
+    return {
+      bpm: cycle.score.average_heart_rate,
+      source: "cycle_average",
+      label: "Latest cycle average HR",
+      sampledAt: cycle.updated_at,
+      isLive: false,
+    };
+  }
+
+  const recovery = latestByUpdatedAt(
+    (recoveries.records ?? []).filter(
+      (record) => record.score?.resting_heart_rate,
+    ),
+  );
+
+  if (recovery?.score?.resting_heart_rate) {
+    return {
+      bpm: recovery.score.resting_heart_rate,
+      source: "recovery_resting",
+      label: "Latest recovery resting HR",
+      sampledAt: recovery.updated_at,
+      isLive: false,
+    };
+  }
+
+  return null;
+}
