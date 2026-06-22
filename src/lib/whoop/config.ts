@@ -1,5 +1,3 @@
-import type { NextRequest } from "next/server";
-
 export const WHOOP_AUTH_URL = "https://api.prod.whoop.com/oauth/oauth2/auth";
 export const WHOOP_TOKEN_URL = "https://api.prod.whoop.com/oauth/oauth2/token";
 export const WHOOP_API_BASE_URL = "https://api.prod.whoop.com/developer";
@@ -26,23 +24,59 @@ export type WhoopClientConfig = {
   redirectUri: string;
 };
 
+type HeaderReader = {
+  get(name: string): string | null;
+};
+
 export function getScopeParam() {
   return WHOOP_SCOPES.join(" ");
 }
 
-export function getRedirectUri(request?: NextRequest | Request) {
-  if (process.env.WHOOP_REDIRECT_URI) {
-    return process.env.WHOOP_REDIRECT_URI;
-  }
-
-  if (request) {
-    return new URL("/api/auth/whoop/callback", request.url).toString();
-  }
-
-  return "http://localhost:3000/api/auth/whoop/callback";
+function firstHeaderValue(value: string | null) {
+  return value?.split(",")[0]?.trim() || null;
 }
 
-export function getConfigStatus(request?: NextRequest | Request): WhoopConfigStatus {
+function getOriginFromHeaders(headers?: HeaderReader, requestUrl?: string) {
+  const forwardedHost = firstHeaderValue(headers?.get("x-forwarded-host") ?? null);
+  const host = forwardedHost ?? firstHeaderValue(headers?.get("host") ?? null);
+  const forwardedProto = firstHeaderValue(headers?.get("x-forwarded-proto") ?? null);
+
+  if (host) {
+    const protocol =
+      forwardedProto ??
+      (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+
+    return `${protocol}://${host}`;
+  }
+
+  if (requestUrl) {
+    return new URL(requestUrl).origin;
+  }
+
+  return "http://localhost:3000";
+}
+
+export function getRedirectUri(request?: Request) {
+  const configuredRedirectUri = process.env.WHOOP_REDIRECT_URI?.trim();
+
+  if (configuredRedirectUri) {
+    return configuredRedirectUri;
+  }
+
+  return `${getOriginFromHeaders(request?.headers, request?.url)}/api/auth/whoop/callback`;
+}
+
+export function getRedirectUriFromHeaders(headers?: HeaderReader) {
+  const configuredRedirectUri = process.env.WHOOP_REDIRECT_URI?.trim();
+
+  if (configuredRedirectUri) {
+    return configuredRedirectUri;
+  }
+
+  return `${getOriginFromHeaders(headers)}/api/auth/whoop/callback`;
+}
+
+export function getConfigStatus(request?: Request): WhoopConfigStatus {
   const missing: string[] = [];
 
   if (!process.env.WHOOP_CLIENT_ID) missing.push("WHOOP_CLIENT_ID");
@@ -62,7 +96,7 @@ export function getConfigStatus(request?: NextRequest | Request): WhoopConfigSta
 }
 
 export function getRequiredWhoopConfig(
-  request?: NextRequest | Request,
+  request?: Request,
 ): WhoopClientConfig {
   const status = getConfigStatus(request);
 
@@ -76,4 +110,3 @@ export function getRequiredWhoopConfig(
     redirectUri: status.redirectUri,
   };
 }
-

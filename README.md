@@ -72,6 +72,8 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. If port 3000 is busy, Next.js prints the alternate local URL.
+If you use an alternate port, update both `WHOOP_REDIRECT_URI` and the WHOOP
+developer app redirect URI to that exact callback URL.
 
 ## WHOOP Scopes
 
@@ -124,6 +126,17 @@ https://your-vercel-domain.vercel.app/api/auth/whoop/callback
 ```
 
 If `WHOOP_REDIRECT_URI` is not set in Vercel, the app derives the callback URL from the request host. That is usually the easiest setup for deployments.
+
+## OAuth Redirect Troubleshooting
+
+WHOOP requires an exact redirect URI match. The callback URL shown on the app's
+setup screen must be present in the WHOOP developer app, including protocol,
+hostname, port, path, and trailing slash behavior.
+
+For production deployments, either leave `WHOOP_REDIRECT_URI` unset so the app
+uses the public request host, or set it to the exact production callback URL.
+Do not reuse the local `http://localhost:3000/api/auth/whoop/callback` value in
+Vercel.
 
 ## Useful Routes
 

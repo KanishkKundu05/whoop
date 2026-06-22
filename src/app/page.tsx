@@ -19,7 +19,11 @@ import { redirect } from "next/navigation";
 import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
 import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
-import { getConfigStatus, getScopeParam } from "@/lib/whoop/config";
+import {
+  getConfigStatus,
+  getRedirectUriFromHeaders,
+  getScopeParam,
+} from "@/lib/whoop/config";
 import { getRecentWhoopData } from "@/lib/whoop/client";
 import {
   getWhoopSession,
@@ -154,16 +158,8 @@ function errorMessage(code?: string) {
 }
 
 async function getDisplayRedirectUri() {
-  if (process.env.WHOOP_REDIRECT_URI) {
-    return process.env.WHOOP_REDIRECT_URI;
-  }
-
   const headerStore = await headers();
-  const host = headerStore.get("host") ?? "localhost:3000";
-  const forwardedProto = headerStore.get("x-forwarded-proto");
-  const protocol = forwardedProto ?? (host.startsWith("localhost") ? "http" : "https");
-
-  return `${protocol}://${host}/api/auth/whoop/callback`;
+  return getRedirectUriFromHeaders(headerStore);
 }
 
 function RangeTabs({ range }: { range: number }) {
