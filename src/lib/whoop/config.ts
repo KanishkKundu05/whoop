@@ -36,6 +36,10 @@ function firstHeaderValue(value: string | null) {
   return value?.split(",")[0]?.trim() || null;
 }
 
+function isLocalHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
 function getOriginFromHeaders(headers?: HeaderReader, requestUrl?: string) {
   const forwardedHost = firstHeaderValue(headers?.get("x-forwarded-host") ?? null);
   const host = forwardedHost ?? firstHeaderValue(headers?.get("host") ?? null);
@@ -56,24 +60,47 @@ function getOriginFromHeaders(headers?: HeaderReader, requestUrl?: string) {
   return "http://localhost:3000";
 }
 
-export function getRedirectUri(request?: Request) {
+function getConfiguredRedirectUri(requestOrigin: string) {
   const configuredRedirectUri = process.env.WHOOP_REDIRECT_URI?.trim();
+
+  if (!configuredRedirectUri) {
+    return null;
+  }
+
+  try {
+    const configuredUrl = new URL(configuredRedirectUri);
+    const requestUrl = new URL(requestOrigin);
+
+    if (
+      isLocalHostname(configuredUrl.hostname) &&
+      !isLocalHostname(requestUrl.hostname)
+    ) {
+      return null;
+    }
+
+    return configuredUrl.toString();
+  } catch {
+    return configuredRedirectUri;
+  }
+}
+
+function getRedirectUriFromOrigin(origin: string) {
+  const configuredRedirectUri = getConfiguredRedirectUri(origin);
 
   if (configuredRedirectUri) {
     return configuredRedirectUri;
   }
 
-  return `${getOriginFromHeaders(request?.headers, request?.url)}/api/auth/whoop/callback`;
+  return `${origin}/api/auth/whoop/callback`;
+}
+
+export function getRedirectUri(request?: Request) {
+  const origin = getOriginFromHeaders(request?.headers, request?.url);
+  return getRedirectUriFromOrigin(origin);
 }
 
 export function getRedirectUriFromHeaders(headers?: HeaderReader) {
-  const configuredRedirectUri = process.env.WHOOP_REDIRECT_URI?.trim();
-
-  if (configuredRedirectUri) {
-    return configuredRedirectUri;
-  }
-
-  return `${getOriginFromHeaders(headers)}/api/auth/whoop/callback`;
+  return getRedirectUriFromOrigin(getOriginFromHeaders(headers));
 }
 
 export function getConfigStatus(request?: Request): WhoopConfigStatus {

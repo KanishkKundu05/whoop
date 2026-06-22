@@ -136,7 +136,9 @@ hostname, port, path, and trailing slash behavior.
 For production deployments, either leave `WHOOP_REDIRECT_URI` unset so the app
 uses the public request host, or set it to the exact production callback URL.
 Do not reuse the local `http://localhost:3000/api/auth/whoop/callback` value in
-Vercel.
+Vercel. If a localhost `WHOOP_REDIRECT_URI` is accidentally present on a
+non-local host, the app ignores it and derives the callback URL from the current
+request host instead.
 
 ## Useful Routes
 
