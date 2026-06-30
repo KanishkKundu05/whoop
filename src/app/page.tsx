@@ -24,6 +24,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
+import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
 import {
   getConfigStatus,
@@ -998,6 +999,7 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   }
 
   const data = await getRecentWhoopData(session.accessToken, range);
+  await syncWhoopDashboardData(data, session);
 
   return <Dashboard data={data} range={range} />;
 }

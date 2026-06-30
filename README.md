@@ -25,6 +25,7 @@ https://whoop-delta-sable.vercel.app/api/auth/whoop/callback
 WHOOP_CLIENT_ID
 WHOOP_CLIENT_SECRET
 WHOOP_SESSION_SECRET
+NEXT_PUBLIC_CONVEX_URL
 ```
 
 After those are in place, the tester can open the production URL, click **Connect WHOOP**, authorize access, and return to the dashboard.
@@ -56,6 +57,7 @@ WHOOP_CLIENT_ID=your-whoop-client-id
 WHOOP_CLIENT_SECRET=your-whoop-client-secret
 WHOOP_REDIRECT_URI=http://localhost:3000/api/auth/whoop/callback
 WHOOP_SESSION_SECRET=replace-with-at-least-32-random-characters
+NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
 ```
 
 Generate a session secret with:
@@ -74,6 +76,24 @@ npm run dev
 Open `http://localhost:3000`. If port 3000 is busy, Next.js prints the alternate local URL.
 If you use an alternate port, update both `WHOOP_REDIRECT_URI` and the WHOOP
 developer app redirect URI to that exact callback URL.
+
+## Convex Database
+
+The app can persist every dashboard fetch into Convex using the schema in
+`convex/schema.ts`. WHOOP data is normalized into typed tables for users, body
+measurements, cycles, recoveries, sleeps, workouts, and dashboard fetch audits.
+
+Set up Convex locally with:
+
+```bash
+npm run convex:dev
+```
+
+That command provisions a Convex deployment, writes the Convex environment
+values, and keeps backend functions synced while it runs. Once
+`NEXT_PUBLIC_CONVEX_URL` is present, dashboard loads call the
+`whoop:storeDashboardFetch` mutation after fetching WHOOP. If Convex is not
+configured, the dashboard still renders live WHOOP data and skips persistence.
 
 ## WHOOP Scopes
 
@@ -111,6 +131,7 @@ npx vercel link
 npx vercel env add WHOOP_CLIENT_ID production
 npx vercel env add WHOOP_CLIENT_SECRET production
 npx vercel env add WHOOP_SESSION_SECRET production
+npx vercel env add NEXT_PUBLIC_CONVEX_URL production
 ```
 
 3. Deploy:
