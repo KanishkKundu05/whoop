@@ -31,6 +31,14 @@ type Query = Record<string, string | number | undefined>;
 const COLLECTION_LIMIT = 25;
 const MAX_COLLECTION_PAGES = 20;
 
+function logWhoop(
+  level: "info" | "warn" | "error",
+  event: string,
+  context: Record<string, unknown>,
+) {
+  console[level](`[whoop:${event}]`, context);
+}
+
 function buildUrl(path: string, query?: Query) {
   const url = new URL(`${WHOOP_API_BASE_URL}${path}`);
 
@@ -50,6 +58,7 @@ export async function fetchWhoop<T>(
   init?: RequestInit,
 ) {
   const url = buildUrl(path, query);
+  const startedAt = Date.now();
   const response = await fetch(url, {
     ...init,
     headers: {
@@ -65,6 +74,13 @@ export async function fetchWhoop<T>(
     const errorClass =
       response.status === 401 ? WhoopUnauthorizedError : WhoopApiError;
 
+    logWhoop("error", "request_failed", {
+      path,
+      status: response.status,
+      elapsedMs: Date.now() - startedAt,
+      details: details.slice(0, 300),
+    });
+
     throw new errorClass(
       `WHOOP request failed with ${response.status}.`,
       response.status,
@@ -74,10 +90,24 @@ export async function fetchWhoop<T>(
   }
 
   if (response.status === 204) {
+    logWhoop("info", "request_complete", {
+      path,
+      status: response.status,
+      elapsedMs: Date.now() - startedAt,
+    });
+
     return null as T;
   }
 
-  return (await response.json()) as T;
+  const data = (await response.json()) as T;
+
+  logWhoop("info", "request_complete", {
+    path,
+    status: response.status,
+    elapsedMs: Date.now() - startedAt,
+  });
+
+  return data;
 }
 
 async function fetchWhoopCollection<T>(
@@ -87,6 +117,7 @@ async function fetchWhoopCollection<T>(
 ) {
   const records: T[] = [];
   let nextToken: string | undefined;
+  let pagesFetched = 0;
 
   for (let page = 0; page < MAX_COLLECTION_PAGES; page += 1) {
     const response = await fetchWhoop<PaginatedWhoopResponse<T>>(
@@ -101,9 +132,17 @@ async function fetchWhoopCollection<T>(
 
     records.push(...(response.records ?? []));
     nextToken = response.next_token;
+    pagesFetched = page + 1;
 
     if (!nextToken) break;
   }
+
+  logWhoop("info", "collection_complete", {
+    path,
+    records: records.length,
+    pagesFetched,
+    hasMorePages: Boolean(nextToken),
+  });
 
   return {
     records,
@@ -147,6 +186,7 @@ export async function getRecentWhoopData(
   accessToken: string,
   rangeDays: number,
 ): Promise<WhoopDashboardData> {
+  const startedAt = Date.now();
   const end = new Date();
   const start = new Date(end.getTime() - rangeDays * 24 * 60 * 60 * 1000);
   const collectionQuery = {
@@ -192,6 +232,33 @@ export async function getRecentWhoopData(
         ),
       ),
     ]);
+
+  logWhoop("info", "dashboard_fetch_complete", {
+    rangeDays,
+    elapsedMs: Date.now() - startedAt,
+    counts: {
+      cycles: cycles.data?.records?.length ?? 0,
+      recoveries: recoveries.data?.records?.length ?? 0,
+      sleeps: sleeps.data?.records?.length ?? 0,
+      workouts: workouts.data?.records?.length ?? 0,
+    },
+    statuses: {
+      profile: profile.status ?? "ok",
+      body: body.status ?? "ok",
+      cycles: cycles.status ?? "ok",
+      recoveries: recoveries.status ?? "ok",
+      sleeps: sleeps.status ?? "ok",
+      workouts: workouts.status ?? "ok",
+    },
+    errors: {
+      profile: profile.error,
+      body: body.error,
+      cycles: cycles.error,
+      recoveries: recoveries.error,
+      sleeps: sleeps.error,
+      workouts: workouts.error,
+    },
+  });
 
   return {
     rangeDays,

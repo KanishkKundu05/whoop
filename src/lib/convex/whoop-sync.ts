@@ -36,6 +36,39 @@ const storeDashboardFetch = makeFunctionReference<
   DashboardFetchInput["counts"]
 >("whoop:storeDashboardFetch");
 
+export type WhoopConvexSyncResult =
+  | {
+      ok: true;
+      skipped: false;
+      whoopUserId: number;
+      counts: DashboardFetchInput["counts"];
+    }
+  | {
+      ok: false;
+      skipped: true;
+      reason: "missing_convex_url" | "missing_whoop_user_id";
+      whoopUserId?: number;
+    }
+  | {
+      ok: false;
+      skipped: false;
+      reason: "convex_mutation_failed";
+      whoopUserId: number;
+      error: string;
+    };
+
+function logConvexSync(
+  level: "info" | "warn" | "error",
+  event: string,
+  context: Record<string, unknown>,
+) {
+  console[level](`[whoop-sync:${event}]`, context);
+}
+
+function getConvexUrl() {
+  return process.env.NEXT_PUBLIC_CONVEX_URL ?? process.env.CONVEX_URL;
+}
+
 function records<T>(resource: { data: { records?: T[] } | null }) {
   return resource.data?.records ?? [];
 }
@@ -266,15 +299,36 @@ function buildFetchRecord(
 export async function syncWhoopDashboardData(
   data: WhoopDashboardData,
   session: WhoopSession,
-) {
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    return;
+): Promise<WhoopConvexSyncResult> {
+  const convexUrl = getConvexUrl();
+
+  if (!convexUrl) {
+    const result: WhoopConvexSyncResult = {
+      ok: false,
+      skipped: true,
+      reason: "missing_convex_url",
+    };
+
+    logConvexSync("warn", "skipped", result);
+    return result;
   }
 
   const whoopUserId = data.profile.data?.user_id ?? session.userId;
 
   if (!whoopUserId) {
-    return;
+    const result: WhoopConvexSyncResult = {
+      ok: false,
+      skipped: true,
+      reason: "missing_whoop_user_id",
+    };
+
+    logConvexSync("warn", "skipped", {
+      ...result,
+      profileStatus: data.profile.status ?? "unknown",
+      profileError: data.profile.error,
+      sessionHasUserId: Boolean(session.userId),
+    });
+    return result;
   }
 
   const body = mapBody(data, whoopUserId);
@@ -297,8 +351,34 @@ export async function syncWhoopDashboardData(
   };
 
   try {
-    await fetchMutation(storeDashboardFetch, payload);
-  } catch {
-    // Convex sync should never prevent the live WHOOP dashboard from rendering.
+    const counts = await fetchMutation(storeDashboardFetch, payload, {
+      url: convexUrl,
+    });
+    const result: WhoopConvexSyncResult = {
+      ok: true,
+      skipped: false,
+      whoopUserId,
+      counts,
+    };
+
+    logConvexSync("info", "stored", result);
+    return result;
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown Convex mutation failure.";
+    const result: WhoopConvexSyncResult = {
+      ok: false,
+      skipped: false,
+      reason: "convex_mutation_failed",
+      whoopUserId,
+      error: errorMessage,
+    };
+
+    logConvexSync("error", "failed", {
+      ...result,
+      counts: payload.fetch.counts,
+      errors: payload.fetch.errors,
+    });
+    return result;
   }
 }

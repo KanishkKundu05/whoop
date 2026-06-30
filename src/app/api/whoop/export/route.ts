@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { getRecentWhoopData } from "@/lib/whoop/client";
 import {
   refreshWhoopTokens,
@@ -42,7 +43,16 @@ export async function GET(request: NextRequest) {
 
   const range = parseRange(request.nextUrl.searchParams.get("range"));
   const data = await getRecentWhoopData(session.accessToken, range);
-  const jsonResponse = NextResponse.json(data);
+  const syncResult = await syncWhoopDashboardData(data, session);
+  const jsonResponse = NextResponse.json(data, {
+    headers: {
+      "X-Whoop-Convex-Sync": syncResult.ok
+        ? "stored"
+        : syncResult.skipped
+          ? `skipped:${syncResult.reason}`
+          : `failed:${syncResult.reason}`,
+    },
+  });
 
   if (refreshedSession) {
     setWhoopSessionCookie(jsonResponse, session);
