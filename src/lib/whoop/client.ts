@@ -28,6 +28,8 @@ export class WhoopApiError extends Error {
 export class WhoopUnauthorizedError extends WhoopApiError {}
 
 type Query = Record<string, string | number | undefined>;
+const COLLECTION_LIMIT = 25;
+const MAX_COLLECTION_PAGES = 20;
 
 function buildUrl(path: string, query?: Query) {
   const url = new URL(`${WHOOP_API_BASE_URL}${path}`);
@@ -78,6 +80,37 @@ export async function fetchWhoop<T>(
   return (await response.json()) as T;
 }
 
+async function fetchWhoopCollection<T>(
+  accessToken: string,
+  path: string,
+  query?: Query,
+) {
+  const records: T[] = [];
+  let nextToken: string | undefined;
+
+  for (let page = 0; page < MAX_COLLECTION_PAGES; page += 1) {
+    const response = await fetchWhoop<PaginatedWhoopResponse<T>>(
+      accessToken,
+      path,
+      {
+        ...query,
+        limit: COLLECTION_LIMIT,
+        nextToken,
+      },
+    );
+
+    records.push(...(response.records ?? []));
+    nextToken = response.next_token;
+
+    if (!nextToken) break;
+  }
+
+  return {
+    records,
+    next_token: nextToken,
+  };
+}
+
 export async function getWhoopProfile(accessToken: string) {
   return fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic");
 }
@@ -117,7 +150,6 @@ export async function getRecentWhoopData(
   const end = new Date();
   const start = new Date(end.getTime() - rangeDays * 24 * 60 * 60 * 1000);
   const collectionQuery = {
-    limit: 25,
     start: start.toISOString(),
     end: end.toISOString(),
   };
@@ -132,28 +164,28 @@ export async function getRecentWhoopData(
         ),
       ),
       resource(
-        fetchWhoop<PaginatedWhoopResponse<Cycle>>(
+        fetchWhoopCollection<Cycle>(
           accessToken,
           "/v2/cycle",
           collectionQuery,
         ),
       ),
       resource(
-        fetchWhoop<PaginatedWhoopResponse<Recovery>>(
+        fetchWhoopCollection<Recovery>(
           accessToken,
           "/v2/recovery",
           collectionQuery,
         ),
       ),
       resource(
-        fetchWhoop<PaginatedWhoopResponse<Sleep>>(
+        fetchWhoopCollection<Sleep>(
           accessToken,
           "/v2/activity/sleep",
           collectionQuery,
         ),
       ),
       resource(
-        fetchWhoop<PaginatedWhoopResponse<Workout>>(
+        fetchWhoopCollection<Workout>(
           accessToken,
           "/v2/activity/workout",
           collectionQuery,
