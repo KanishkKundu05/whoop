@@ -1,12 +1,18 @@
 import {
   Activity,
+  BedDouble,
+  Brain,
   CalendarRange,
+  ChartBarStacked,
+  Clock3,
   Download,
   Dumbbell,
   FileText,
+  Gauge,
   HeartPulse,
   LogIn,
   LogOut,
+  Moon,
   RefreshCw,
   Scale,
   ShieldOff,
@@ -87,6 +93,49 @@ function formatDuration(milliseconds?: number) {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h ${minutes}m`;
+}
+
+function formatPercent(value?: number | null) {
+  return value === undefined || value === null ? "—" : `${formatNumber(value)}%`;
+}
+
+function average(values: Array<number | null | undefined>) {
+  const validValues = values.filter((value): value is number => (
+    value !== undefined && value !== null && !Number.isNaN(value)
+  ));
+
+  if (validValues.length === 0) return undefined;
+
+  return validValues.reduce((total, value) => total + value, 0) / validValues.length;
+}
+
+function getSleepTimeMilliseconds(sleep?: Sleep) {
+  const stages = sleep?.score?.stage_summary;
+
+  if (!stages) return undefined;
+
+  return (
+    stages.total_light_sleep_time_milli +
+    stages.total_slow_wave_sleep_time_milli +
+    stages.total_rem_sleep_time_milli
+  );
+}
+
+function getSleepNeedMilliseconds(sleep?: Sleep) {
+  const needed = sleep?.score?.sleep_needed;
+
+  if (!needed) return undefined;
+
+  return (
+    needed.baseline_milli +
+    needed.need_from_sleep_debt_milli +
+    needed.need_from_recent_strain_milli -
+    needed.need_from_recent_nap_milli
+  );
+}
+
+function clampPercent(value: number) {
+  return Math.min(Math.max(value, 0), 100);
 }
 
 function getRecords<T>(resource: ResourceResult<{ records?: T[] }>) {
@@ -390,6 +439,239 @@ function MetricCard({
   );
 }
 
+function SleepAnalyser({
+  sleeps,
+  range,
+}: {
+  sleeps: Sleep[];
+  range: number;
+}) {
+  const scoredSleeps = sleeps
+    .filter((sleep) => sleep.score_state === "SCORED" && sleep.score)
+    .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
+  const mainSleeps = scoredSleeps.filter((sleep) => !sleep.nap);
+  const analysedSleeps = mainSleeps.length ? mainSleeps : scoredSleeps;
+  const latestSleep = analysedSleeps[0];
+  const latestStages = latestSleep?.score?.stage_summary;
+  const latestDebt = latestSleep?.score?.sleep_needed.need_from_sleep_debt_milli;
+  const averageSleepTime = average(analysedSleeps.map(getSleepTimeMilliseconds));
+  const averageSleepNeed = average(analysedSleeps.map(getSleepNeedMilliseconds));
+  const averagePerformance = average(
+    analysedSleeps.map((sleep) => sleep.score?.sleep_performance_percentage),
+  );
+  const averageEfficiency = average(
+    analysedSleeps.map((sleep) => sleep.score?.sleep_efficiency_percentage),
+  );
+  const averageConsistency = average(
+    analysedSleeps.map((sleep) => sleep.score?.sleep_consistency_percentage),
+  );
+  const stageSegments = [
+    {
+      label: "Light",
+      value: latestStages?.total_light_sleep_time_milli ?? 0,
+      color: "bg-sky-500",
+    },
+    {
+      label: "REM",
+      value: latestStages?.total_rem_sleep_time_milli ?? 0,
+      color: "bg-violet-500",
+    },
+    {
+      label: "Deep",
+      value: latestStages?.total_slow_wave_sleep_time_milli ?? 0,
+      color: "bg-lime-500",
+    },
+    {
+      label: "Awake",
+      value: latestStages?.total_awake_time_milli ?? 0,
+      color: "bg-zinc-400",
+    },
+  ];
+  const stageTotal = stageSegments.reduce((total, segment) => total + segment.value, 0);
+  const sleepNotes = buildSleepNotes({
+    latestSleep,
+    averagePerformance,
+    latestDebt,
+  });
+
+  return (
+    <section className="border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 pb-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-zinc-950">Sleep analyser</h3>
+          <p className="mt-1 text-sm text-zinc-500">
+            {analysedSleeps.length} scored {analysedSleeps.length === 1 ? "sleep" : "sleeps"} in the last {range} days
+          </p>
+        </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-lg bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800">
+          <Moon size={16} />
+          Latest {formatPercent(latestSleep?.score?.sleep_performance_percentage)}
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SleepStat
+            icon={<BedDouble size={18} />}
+            label="Avg sleep"
+            value={formatDuration(averageSleepTime)}
+            detail="Main sleep duration"
+          />
+          <SleepStat
+            icon={<Clock3 size={18} />}
+            label="Avg need"
+            value={formatDuration(averageSleepNeed)}
+            detail="Baseline plus WHOOP load"
+          />
+          <SleepStat
+            icon={<Gauge size={18} />}
+            label="Efficiency"
+            value={formatPercent(averageEfficiency)}
+            detail="Time asleep while in bed"
+          />
+          <SleepStat
+            icon={<ChartBarStacked size={18} />}
+            label="Consistency"
+            value={formatPercent(averageConsistency)}
+            detail="Sleep timing regularity"
+          />
+        </div>
+
+        <div className="border border-zinc-200 bg-zinc-50 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-950">
+                Latest stage mix
+              </h4>
+              <p className="mt-1 text-xs text-zinc-500">
+                {latestSleep ? formatDateTime(latestSleep.start) : "No scored sleep"}
+              </p>
+            </div>
+            <p className="text-right text-sm font-semibold text-zinc-950">
+              {formatDuration(getSleepTimeMilliseconds(latestSleep))}
+            </p>
+          </div>
+
+          {stageTotal > 0 ? (
+            <>
+              <div className="mt-4 flex h-3 overflow-hidden rounded-full bg-zinc-200">
+                {stageSegments.map((segment) => (
+                  <span
+                    key={segment.label}
+                    className={segment.color}
+                    style={{ width: `${clampPercent((segment.value / stageTotal) * 100)}%` }}
+                  />
+                ))}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                {stageSegments.map((segment) => (
+                  <div key={segment.label}>
+                    <p className="inline-flex items-center gap-1 font-medium text-zinc-700">
+                      <span className={`h-2 w-2 rounded-full ${segment.color}`} />
+                      {segment.label}
+                    </p>
+                    <p className="mt-1 text-zinc-500">
+                      {formatDuration(segment.value)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="mt-4 border border-dashed border-zinc-300 bg-white px-4 py-6 text-center text-sm text-zinc-500">
+              No sleep-stage data in this range
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        {sleepNotes.map((note) => (
+          <div
+            key={note}
+            className="flex gap-3 border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-700"
+          >
+            <Brain className="mt-0.5 shrink-0 text-cyan-700" size={17} />
+            <p className="leading-6">{note}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SleepStat({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="border border-zinc-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
+          {icon}
+        </div>
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-500">
+          {label}
+        </p>
+      </div>
+      <p className="mt-4 text-2xl font-semibold tracking-normal text-zinc-950">
+        {value}
+      </p>
+      <p className="mt-1 min-h-5 text-xs text-zinc-500">{detail}</p>
+    </div>
+  );
+}
+
+function buildSleepNotes({
+  latestSleep,
+  averagePerformance,
+  latestDebt,
+}: {
+  latestSleep?: Sleep;
+  averagePerformance?: number;
+  latestDebt?: number;
+}) {
+  const notes: string[] = [];
+  const performance = latestSleep?.score?.sleep_performance_percentage;
+  const efficiency = latestSleep?.score?.sleep_efficiency_percentage;
+  const consistency = latestSleep?.score?.sleep_consistency_percentage;
+
+  if (performance === undefined) {
+    notes.push("Waiting for a scored sleep before generating a performance read.");
+  } else if (performance >= 85) {
+    notes.push("Latest sleep covered most of the calculated need.");
+  } else if (performance >= 70) {
+    notes.push("Latest sleep was serviceable, but still below full WHOOP need.");
+  } else {
+    notes.push("Latest sleep fell meaningfully short of the calculated need.");
+  }
+
+  if (latestDebt !== undefined && latestDebt > 60 * 60 * 1000) {
+    notes.push(`${formatDuration(latestDebt)} of current need comes from sleep debt.`);
+  } else if (averagePerformance !== undefined && averagePerformance >= 85) {
+    notes.push("Average performance is holding in a strong range for this window.");
+  } else {
+    notes.push("Average performance leaves room for more sleep coverage this window.");
+  }
+
+  if (consistency !== undefined && consistency < 70) {
+    notes.push("Consistency is the weakest signal; bedtime and wake timing are drifting.");
+  } else if (efficiency !== undefined && efficiency < 85) {
+    notes.push("Efficiency is below target, with more wake time inside the sleep window.");
+  } else {
+    notes.push("Efficiency and consistency are not the main limiters in the latest score.");
+  }
+
+  return notes;
+}
+
 function DataWarning({ data }: { data: WhoopDashboardData }) {
   const failures = [
     ["Profile", data.profile],
@@ -479,6 +761,8 @@ function Dashboard({ data, range }: { data: WhoopDashboardData; range: number })
           tone="zinc"
         />
       </section>
+
+      <SleepAnalyser sleeps={sleeps} range={range} />
 
       <AgenticDj songs={DJ_SONG_CATALOG} />
 
