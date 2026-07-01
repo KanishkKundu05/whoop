@@ -1,6 +1,6 @@
-# WHOOP Dashboard
+# WHOOP + Garmin Dashboard
 
-A private Next.js dashboard for WHOOP API data. It implements WHOOP OAuth, stores tokens in an encrypted HTTP-only cookie, refreshes access tokens server-side, displays recent profile, body, recovery, cycle, sleep, and workout data, and includes an Agentic DJ that matches SoundCloud tracks to the freshest WHOOP heart-rate signal available through the API.
+A private Next.js dashboard for WHOOP API data with optional Garmin API account linking. It implements separate WHOOP OAuth and Garmin OAuth 2.0 PKCE flows, stores provider tokens in separate encrypted HTTP-only cookies, refreshes access tokens server-side, displays recent WHOOP profile, body, recovery, cycle, sleep, and workout data, and includes an Agentic DJ that matches SoundCloud tracks to the freshest WHOOP heart-rate signal available through the API.
 
 ## Try the Deployed App
 
@@ -25,10 +25,13 @@ https://whoop-delta-sable.vercel.app/api/auth/whoop/callback
 WHOOP_CLIENT_ID
 WHOOP_CLIENT_SECRET
 WHOOP_SESSION_SECRET
+GARMIN_CLIENT_ID
+GARMIN_CLIENT_SECRET
+GARMIN_SESSION_SECRET
 NEXT_PUBLIC_CONVEX_URL
 ```
 
-After those are in place, the tester can open the production URL, click **Connect WHOOP**, authorize access, and return to the dashboard.
+After those are in place, the tester can open the production URL, click **Connect WHOOP** or **Connect Garmin**, authorize access, and return to the dashboard.
 
 ## First-Time Local Setup
 
@@ -44,19 +47,31 @@ https://developer-dashboard.whoop.com
 http://localhost:3000/api/auth/whoop/callback
 ```
 
-3. Copy the env template:
+3. Create a Garmin app in the Garmin Connect Developer Program and add this local redirect URI:
+
+```text
+http://localhost:3000/api/auth/garmin/callback
+```
+
+Garmin permissions are managed in the Garmin developer portal and during user consent.
+
+4. Copy the env template:
 
 ```bash
 cp .env.example .env.local
 ```
 
-4. Fill in `.env.local`:
+5. Fill in `.env.local`:
 
 ```text
 WHOOP_CLIENT_ID=your-whoop-client-id
 WHOOP_CLIENT_SECRET=your-whoop-client-secret
 WHOOP_REDIRECT_URI=http://localhost:3000/api/auth/whoop/callback
 WHOOP_SESSION_SECRET=replace-with-at-least-32-random-characters
+GARMIN_CLIENT_ID=your-garmin-client-id
+GARMIN_CLIENT_SECRET=your-garmin-client-secret
+GARMIN_REDIRECT_URI=http://localhost:3000/api/auth/garmin/callback
+GARMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
 NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
 ```
 
@@ -66,7 +81,7 @@ Generate a session secret with:
 openssl rand -base64 32
 ```
 
-5. Install dependencies and start the app:
+6. Install dependencies and start the app:
 
 ```bash
 npm install
@@ -74,8 +89,9 @@ npm run dev
 ```
 
 Open `http://localhost:3000`. If port 3000 is busy, Next.js prints the alternate local URL.
-If you use an alternate port, update both `WHOOP_REDIRECT_URI` and the WHOOP
-developer app redirect URI to that exact callback URL.
+If you use an alternate port, update `WHOOP_REDIRECT_URI`,
+`GARMIN_REDIRECT_URI`, and both developer app redirect URIs to the exact
+callback URLs.
 
 ## Convex Database
 
@@ -105,6 +121,18 @@ offline read:profile read:body_measurement read:recovery read:cycles read:sleep 
 
 These scopes are used for profile details, body metrics, recovery, cycle, sleep, workout records, token refresh, the JSON export route, and the Agentic DJ heart-rate signal.
 
+## Garmin API Support
+
+Garmin uses OAuth 2.0 with PKCE for the Garmin Connect Developer Program. This app keeps Garmin separate from WHOOP with:
+
+- `/api/auth/garmin` to start the Garmin OAuth flow.
+- `/api/auth/garmin/callback` as the Garmin redirect URI.
+- `/api/auth/garmin/refresh` to rotate Garmin access tokens.
+- `/api/auth/garmin/disconnect` to delete the Garmin user registration and clear the local Garmin session.
+- `/api/garmin/diagnostics` to verify the connected Garmin user ID, permissions, token expiry, and configuration.
+
+Garmin API permissions are selected in the Garmin developer portal and by the user during consent, so the app does not send a `scope` parameter.
+
 ## Agentic DJ
 
 After connecting WHOOP, the dashboard shows an **Agentic DJ** panel. Click **Start** to poll the server for a recommendation. The server reads the latest available WHOOP heart-rate signal, selects the closest matching song from the local BPM-tagged SoundCloud catalogue, and the client plays it through the SoundCloud Widget API.
@@ -131,6 +159,9 @@ npx vercel link
 npx vercel env add WHOOP_CLIENT_ID production
 npx vercel env add WHOOP_CLIENT_SECRET production
 npx vercel env add WHOOP_SESSION_SECRET production
+npx vercel env add GARMIN_CLIENT_ID production
+npx vercel env add GARMIN_CLIENT_SECRET production
+npx vercel env add GARMIN_SESSION_SECRET production
 npx vercel env add NEXT_PUBLIC_CONVEX_URL production
 ```
 
@@ -146,27 +177,36 @@ npx vercel --prod
 https://your-vercel-domain.vercel.app/api/auth/whoop/callback
 ```
 
-If `WHOOP_REDIRECT_URI` is not set in Vercel, the app derives the callback URL from the request host. That is usually the easiest setup for deployments.
+5. Add the production callback URL to the Garmin app:
+
+```text
+https://your-vercel-domain.vercel.app/api/auth/garmin/callback
+```
+
+If `WHOOP_REDIRECT_URI` or `GARMIN_REDIRECT_URI` is not set in Vercel, the app derives the callback URL from the request host. That is usually the easiest setup for deployments.
 
 ## OAuth Redirect Troubleshooting
 
-WHOOP requires an exact redirect URI match. The callback URL shown on the app's
-setup screen must be present in the WHOOP developer app, including protocol,
-hostname, port, path, and trailing slash behavior.
+WHOOP and Garmin require exact redirect URI matches. The callback URLs shown on
+the app's setup screen must be present in the corresponding developer apps,
+including protocol, hostname, port, path, and trailing slash behavior.
 
-For production deployments, either leave `WHOOP_REDIRECT_URI` unset so the app
-uses the public request host, or set it to the exact production callback URL.
-Do not reuse the local `http://localhost:3000/api/auth/whoop/callback` value in
-Vercel. If a localhost `WHOOP_REDIRECT_URI` is accidentally present on a
-non-local host, the app ignores it and derives the callback URL from the current
-request host instead.
+For production deployments, either leave provider redirect URI variables unset
+so the app uses the public request host, or set them to the exact production
+callback URLs. Do not reuse local callback URLs in Vercel. If a localhost
+redirect URI is accidentally present on a non-local host, the app ignores it and
+derives the callback URL from the current request host instead.
 
 ## Useful Routes
 
 - `/api/auth/whoop` starts the WHOOP OAuth flow.
 - `/api/auth/refresh` refreshes and rotates the WHOOP token session.
-- `/api/auth/logout` clears only the local encrypted cookie.
+- `/api/auth/logout` clears local encrypted provider cookies.
 - `/api/auth/disconnect` revokes WHOOP access and clears the local session.
+- `/api/auth/garmin` starts the Garmin OAuth PKCE flow.
+- `/api/auth/garmin/refresh` refreshes and rotates the Garmin token session.
+- `/api/auth/garmin/disconnect` revokes Garmin access and clears the local session.
+- `/api/garmin/diagnostics` returns Garmin configuration and session diagnostics.
 - `/api/whoop/export?range=30` returns the same dashboard data as JSON for the current browser session.
 - `/api/dj/recommendation` returns the current Agentic DJ recommendation for a connected session.
 

@@ -58,7 +58,7 @@ export type WhoopConvexSyncResult =
     };
 
 function logConvexSync(
-  level: "info" | "warn" | "error",
+  level: "info" | "warn",
   event: string,
   context: Record<string, unknown>,
 ) {
@@ -374,7 +374,7 @@ export async function syncWhoopDashboardData(
       error: errorMessage,
     };
 
-    logConvexSync("error", "failed", {
+    logConvexSync("warn", "failed", {
       ...result,
       counts: payload.fetch.counts,
       errors: payload.fetch.errors,

@@ -32,7 +32,7 @@ const COLLECTION_LIMIT = 25;
 const MAX_COLLECTION_PAGES = 20;
 
 function logWhoop(
-  level: "info" | "warn" | "error",
+  level: "info" | "warn",
   event: string,
   context: Record<string, unknown>,
 ) {
@@ -74,7 +74,7 @@ export async function fetchWhoop<T>(
     const errorClass =
       response.status === 401 ? WhoopUnauthorizedError : WhoopApiError;
 
-    logWhoop("error", "request_failed", {
+    logWhoop("warn", "request_failed", {
       path,
       status: response.status,
       elapsedMs: Date.now() - startedAt,
@@ -150,6 +150,38 @@ async function fetchWhoopCollection<T>(
   };
 }
 
+function collectionCount<T>(resource: ResourceResult<PaginatedWhoopResponse<T>>) {
+  return resource.data?.records?.length ?? 0;
+}
+
+function hasCollectionRecords(data: {
+  cycles: ResourceResult<PaginatedWhoopResponse<Cycle>>;
+  recoveries: ResourceResult<PaginatedWhoopResponse<Recovery>>;
+  sleeps: ResourceResult<PaginatedWhoopResponse<Sleep>>;
+  workouts: ResourceResult<PaginatedWhoopResponse<Workout>>;
+}) {
+  return (
+    collectionCount(data.cycles) +
+      collectionCount(data.recoveries) +
+      collectionCount(data.sleeps) +
+      collectionCount(data.workouts) >
+    0
+  );
+}
+
+async function fetchWhoopCollections(accessToken: string, query?: Query) {
+  const [cycles, recoveries, sleeps, workouts] = await Promise.all([
+    resource(fetchWhoopCollection<Cycle>(accessToken, "/v2/cycle", query)),
+    resource(fetchWhoopCollection<Recovery>(accessToken, "/v2/recovery", query)),
+    resource(fetchWhoopCollection<Sleep>(accessToken, "/v2/activity/sleep", query)),
+    resource(
+      fetchWhoopCollection<Workout>(accessToken, "/v2/activity/workout", query),
+    ),
+  ]);
+
+  return { cycles, recoveries, sleeps, workouts };
+}
+
 export async function getWhoopProfile(accessToken: string) {
   return fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic");
 }
@@ -194,83 +226,71 @@ export async function getRecentWhoopData(
     end: end.toISOString(),
   };
 
-  const [profile, body, cycles, recoveries, sleeps, workouts] =
-    await Promise.all([
-      resource(fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic")),
-      resource(
-        fetchWhoop<UserBodyMeasurement>(
-          accessToken,
-          "/v2/user/measurement/body",
-        ),
+  const [profile, body, filteredCollections] = await Promise.all([
+    resource(fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic")),
+    resource(
+      fetchWhoop<UserBodyMeasurement>(
+        accessToken,
+        "/v2/user/measurement/body",
       ),
-      resource(
-        fetchWhoopCollection<Cycle>(
-          accessToken,
-          "/v2/cycle",
-          collectionQuery,
-        ),
-      ),
-      resource(
-        fetchWhoopCollection<Recovery>(
-          accessToken,
-          "/v2/recovery",
-          collectionQuery,
-        ),
-      ),
-      resource(
-        fetchWhoopCollection<Sleep>(
-          accessToken,
-          "/v2/activity/sleep",
-          collectionQuery,
-        ),
-      ),
-      resource(
-        fetchWhoopCollection<Workout>(
-          accessToken,
-          "/v2/activity/workout",
-          collectionQuery,
-        ),
-      ),
-    ]);
+    ),
+    fetchWhoopCollections(accessToken, collectionQuery),
+  ]);
+
+  let collections = filteredCollections;
+  let source: WhoopDashboardData["source"] = "range";
+
+  if (!hasCollectionRecords(collections)) {
+    logWhoop("warn", "dashboard_fetch_empty_range", {
+      rangeDays,
+      start: collectionQuery.start,
+      end: collectionQuery.end,
+    });
+
+    collections = await fetchWhoopCollections(accessToken);
+    source = "latest_unfiltered";
+  }
 
   logWhoop("info", "dashboard_fetch_complete", {
     rangeDays,
+    source,
     elapsedMs: Date.now() - startedAt,
     counts: {
-      cycles: cycles.data?.records?.length ?? 0,
-      recoveries: recoveries.data?.records?.length ?? 0,
-      sleeps: sleeps.data?.records?.length ?? 0,
-      workouts: workouts.data?.records?.length ?? 0,
+      cycles: collectionCount(collections.cycles),
+      recoveries: collectionCount(collections.recoveries),
+      sleeps: collectionCount(collections.sleeps),
+      workouts: collectionCount(collections.workouts),
     },
     statuses: {
       profile: profile.status ?? "ok",
       body: body.status ?? "ok",
-      cycles: cycles.status ?? "ok",
-      recoveries: recoveries.status ?? "ok",
-      sleeps: sleeps.status ?? "ok",
-      workouts: workouts.status ?? "ok",
+      cycles: collections.cycles.status ?? "ok",
+      recoveries: collections.recoveries.status ?? "ok",
+      sleeps: collections.sleeps.status ?? "ok",
+      workouts: collections.workouts.status ?? "ok",
     },
     errors: {
       profile: profile.error,
       body: body.error,
-      cycles: cycles.error,
-      recoveries: recoveries.error,
-      sleeps: sleeps.error,
-      workouts: workouts.error,
+      cycles: collections.cycles.error,
+      recoveries: collections.recoveries.error,
+      sleeps: collections.sleeps.error,
+      workouts: collections.workouts.error,
     },
   });
 
   return {
     rangeDays,
+    source,
     start: start.toISOString(),
     end: end.toISOString(),
     fetchedAt: new Date().toISOString(),
     profile,
     body,
-    cycles,
-    recoveries,
-    sleeps,
-    workouts,
+    cycles: collections.cycles,
+    recoveries: collections.recoveries,
+    sleeps: collections.sleeps,
+    workouts: collections.workouts,
   };
 }
 

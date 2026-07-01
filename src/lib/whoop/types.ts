@@ -160,6 +160,7 @@ export type ResourceResult<T> = {
 
 export type WhoopDashboardData = {
   rangeDays: number;
+  source: "range" | "latest_unfiltered";
   start: string;
   end: string;
   fetchedAt: string;
@@ -170,4 +171,3 @@ export type WhoopDashboardData = {
   sleeps: ResourceResult<PaginatedWhoopResponse<Sleep>>;
   workouts: ResourceResult<PaginatedWhoopResponse<Workout>>;
 };
-

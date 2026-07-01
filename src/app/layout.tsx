@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WHOOP Dashboard",
-  description: "A private dashboard for WHOOP API data.",
+  title: "WHOOP + Garmin Dashboard",
+  description: "A private dashboard for WHOOP data with Garmin API linking.",
 };
 
 export default function RootLayout({
@@ -31,4 +31,3 @@ export default function RootLayout({
     </html>
   );
 }
-

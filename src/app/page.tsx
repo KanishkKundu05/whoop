@@ -1,5 +1,6 @@
 import {
   Activity,
+  BadgeCheck,
   BedDouble,
   Brain,
   CalendarRange,
@@ -16,7 +17,9 @@ import {
   RefreshCw,
   Scale,
   ShieldOff,
+  Stethoscope,
   User,
+  Watch,
 } from "lucide-react";
 import { Children } from "react";
 import { headers } from "next/headers";
@@ -26,6 +29,16 @@ import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
 import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
+import {
+  getGarminConfigStatus,
+  getGarminRedirectUriFromHeaders,
+  getGarminScopeDescription,
+} from "@/lib/garmin/config";
+import {
+  getGarminSession,
+  isGarminSessionExpiring,
+} from "@/lib/garmin/session";
+import type { GarminSession } from "@/lib/garmin/types";
 import {
   getConfigStatus,
   getRedirectUriFromHeaders,
@@ -50,6 +63,8 @@ export const dynamic = "force-dynamic";
 type SearchParams = Promise<{
   auth_error?: string | string[];
   disconnected?: string | string[];
+  garmin_auth_error?: string | string[];
+  garmin_disconnected?: string | string[];
   range?: string | string[];
 }>;
 
@@ -211,9 +226,26 @@ function errorMessage(code?: string) {
   return code ? messages[code] ?? `WHOOP auth error: ${code}` : null;
 }
 
-async function getDisplayRedirectUri() {
+function garminErrorMessage(code?: string) {
+  const messages: Record<string, string> = {
+    disconnect_failed: "Garmin access could not be revoked, so the local session was cleared.",
+    missing_code: "Garmin did not return an authorization code.",
+    missing_config: "Garmin credentials are not configured yet.",
+    refresh_failed: "Garmin token refresh failed. Reconnect your account.",
+    session_expired: "The Garmin session expired. Reconnect your account.",
+    state_mismatch: "The Garmin OAuth state check failed. Start the connection again.",
+    token_exchange_failed: "The Garmin authorization code could not be exchanged.",
+  };
+
+  return code ? messages[code] ?? `Garmin auth error: ${code}` : null;
+}
+
+async function getDisplayRedirectUris() {
   const headerStore = await headers();
-  return getRedirectUriFromHeaders(headerStore);
+  return {
+    garmin: getGarminRedirectUriFromHeaders(headerStore),
+    whoop: getRedirectUriFromHeaders(headerStore),
+  };
 }
 
 function RangeTabs({ range }: { range: number }) {
@@ -292,15 +324,26 @@ function Shell({
 function ConnectScreen({
   authError,
   disconnected,
+  garminAuthError,
+  garminDisconnected,
+  garminMissing,
+  garminRedirectUri,
+  garminSession,
   missing,
   redirectUri,
 }: {
   authError?: string;
   disconnected?: boolean;
+  garminAuthError?: string;
+  garminDisconnected?: boolean;
+  garminMissing: string[];
+  garminRedirectUri: string;
+  garminSession?: GarminSession | null;
   missing: string[];
   redirectUri: string;
 }) {
   const isReady = missing.length === 0;
+  const isGarminReady = garminMissing.length === 0;
 
   return (
     <Shell>
@@ -354,6 +397,76 @@ function ConnectScreen({
             </a>
           </div>
         </div>
+        <div className="border border-zinc-200 bg-white p-6">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-950 text-emerald-200">
+            <Watch size={22} />
+          </div>
+          <h2 className="mt-6 text-2xl font-semibold tracking-normal">
+            Connect your Garmin account
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
+            Garmin uses a separate OAuth 2.0 PKCE flow. This app stores Garmin
+            tokens in a separate encrypted HTTP-only cookie and can verify the
+            connected user ID and permissions through the Garmin Wellness API.
+          </p>
+          {garminAuthError ? (
+            <div className="mt-5 border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+              {garminErrorMessage(garminAuthError)}
+            </div>
+          ) : null}
+          {garminDisconnected ? (
+            <div className="mt-5 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              Garmin access was revoked and the local session was cleared.
+            </div>
+          ) : null}
+          {garminSession ? (
+            <div className="mt-5 border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              Connected{garminSession.userId ? ` as ${garminSession.userId}` : ""}.
+            </div>
+          ) : null}
+          <div className="mt-7 flex flex-wrap items-center gap-3">
+            {garminSession ? (
+              <>
+                <a
+                  href="/api/garmin/diagnostics"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 hover:border-zinc-950"
+                >
+                  <Stethoscope size={17} />
+                  Garmin diagnostics
+                </a>
+                <form action="/api/auth/garmin/disconnect" method="post">
+                  <button className="inline-flex h-11 items-center gap-2 rounded-lg border border-rose-200 bg-white px-4 text-sm font-semibold text-rose-700 hover:border-rose-600">
+                    <ShieldOff size={17} />
+                    Revoke Garmin
+                  </button>
+                </form>
+              </>
+            ) : isGarminReady ? (
+              <a
+                href="/api/auth/garmin"
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-emerald-950 px-4 text-sm font-semibold text-white hover:bg-emerald-900"
+              >
+                <LogIn size={17} />
+                Connect Garmin
+              </a>
+            ) : (
+              <button
+                disabled
+                className="inline-flex h-11 items-center gap-2 rounded-lg bg-zinc-300 px-4 text-sm font-semibold text-zinc-500"
+              >
+                <ShieldOff size={17} />
+                Configure Garmin env
+              </button>
+            )}
+            <a
+              href="https://developer.garmin.com/gc-developer-program/overview/"
+              className="inline-flex h-11 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 hover:border-zinc-950"
+            >
+              <User size={17} />
+              Garmin developer
+            </a>
+          </div>
+        </div>
         <aside className="border border-zinc-200 bg-white p-5">
           <h3 className="text-sm font-semibold text-zinc-950">
             First-time setup
@@ -384,15 +497,33 @@ function ConnectScreen({
               </dd>
             </div>
             <div>
+              <dt className="font-medium text-zinc-500">Garmin redirect URI</dt>
+              <dd className="mt-1 break-all font-mono text-xs text-zinc-900">
+                {garminRedirectUri}
+              </dd>
+            </div>
+            <div>
               <dt className="font-medium text-zinc-500">Scopes</dt>
               <dd className="mt-1 break-words font-mono text-xs text-zinc-900">
                 {getScopeParam()}
               </dd>
             </div>
             <div>
-              <dt className="font-medium text-zinc-500">Missing env</dt>
+              <dt className="font-medium text-zinc-500">Garmin permissions</dt>
+              <dd className="mt-1 break-words font-mono text-xs text-zinc-900">
+                {getGarminScopeDescription()}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-zinc-500">Missing WHOOP env</dt>
               <dd className="mt-1 text-zinc-900">
                 {missing.length ? missing.join(", ") : "None"}
+              </dd>
+            </div>
+            <div>
+              <dt className="font-medium text-zinc-500">Missing Garmin env</dt>
+              <dd className="mt-1 text-zinc-900">
+                {garminMissing.length ? garminMissing.join(", ") : "None"}
               </dd>
             </div>
           </dl>
@@ -722,7 +853,182 @@ function DataWarning({ data }: { data: WhoopDashboardData }) {
   );
 }
 
-function Dashboard({ data, range }: { data: WhoopDashboardData; range: number }) {
+function EmptyDataNotice({
+  range,
+  counts,
+  source,
+}: {
+  range: number;
+  counts: {
+    cycles: number;
+    recoveries: number;
+    sleeps: number;
+    workouts: number;
+  };
+  source: WhoopDashboardData["source"];
+}) {
+  const total =
+    counts.cycles + counts.recoveries + counts.sleeps + counts.workouts;
+
+  if (total > 0) return null;
+
+  return (
+    <section className="border border-amber-200 bg-amber-50 p-5 text-amber-950">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
+            <Stethoscope size={20} />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold tracking-normal">
+              WHOOP returned no metric records
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-900">
+              The profile request succeeds, but cycle, recovery, sleep, and
+              workout collections are all empty. The app tried the last {range}
+              days and {source === "latest_unfiltered" ? "also tried WHOOP's unfiltered latest records." : "did not need the fallback."}
+            </p>
+          </div>
+        </div>
+        <div className="grid shrink-0 grid-cols-2 gap-2 text-xs font-semibold sm:grid-cols-4 md:grid-cols-2">
+          <span className="border border-amber-200 bg-white px-3 py-2">
+            Cycles {counts.cycles}
+          </span>
+          <span className="border border-amber-200 bg-white px-3 py-2">
+            Recovery {counts.recoveries}
+          </span>
+          <span className="border border-amber-200 bg-white px-3 py-2">
+            Sleep {counts.sleeps}
+          </span>
+          <span className="border border-amber-200 bg-white px-3 py-2">
+            Workouts {counts.workouts}
+          </span>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <a
+          href={`/api/whoop/diagnostics?range=${range}`}
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 text-sm font-medium text-amber-950 hover:border-amber-700"
+        >
+          <Stethoscope size={15} />
+          Diagnostics JSON
+        </a>
+        <a
+          href={`/api/whoop/export?range=${range}`}
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 text-sm font-medium text-amber-950 hover:border-amber-700"
+        >
+          <Download size={15} />
+          Raw WHOOP JSON
+        </a>
+      </div>
+    </section>
+  );
+}
+
+function GarminConnectionPanel({
+  missing,
+  redirectUri,
+  session,
+}: {
+  missing: string[];
+  redirectUri: string;
+  session?: GarminSession | null;
+}) {
+  const isReady = missing.length === 0;
+
+  return (
+    <section className="border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+            {session ? <BadgeCheck size={20} /> : <Watch size={20} />}
+          </div>
+          <div>
+            <h3 className="text-base font-semibold tracking-normal text-zinc-950">
+              Garmin API
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
+              {session
+                ? `Connected${session.userId ? ` as ${session.userId}` : ""}. Garmin permissions are managed during app setup and user consent.`
+                : "Optional Garmin support uses a separate OAuth 2.0 PKCE flow and its own encrypted session cookie."}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {session ? (
+            <>
+              <a
+                href="/api/garmin/diagnostics"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"
+              >
+                <Stethoscope size={16} />
+                Diagnostics
+              </a>
+              <form action="/api/auth/garmin/disconnect" method="post">
+                <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-700 hover:border-rose-600">
+                  <ShieldOff size={16} />
+                  Revoke Garmin
+                </button>
+              </form>
+            </>
+          ) : isReady ? (
+            <a
+              href="/api/auth/garmin"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-emerald-950 px-3 text-sm font-semibold text-white hover:bg-emerald-900"
+            >
+              <LogIn size={16} />
+              Connect Garmin
+            </a>
+          ) : (
+            <button
+              disabled
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-300 px-3 text-sm font-semibold text-zinc-500"
+            >
+              <ShieldOff size={16} />
+              Configure Garmin
+            </button>
+          )}
+        </div>
+      </div>
+      <dl className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 text-sm md:grid-cols-3">
+        <div>
+          <dt className="font-medium text-zinc-500">Redirect URI</dt>
+          <dd className="mt-1 break-all font-mono text-xs text-zinc-900">
+            {redirectUri}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-zinc-500">Permissions</dt>
+          <dd className="mt-1 break-words font-mono text-xs text-zinc-900">
+            {session?.permissions?.length
+              ? session.permissions.join(" ")
+              : getGarminScopeDescription()}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-zinc-500">Missing env</dt>
+          <dd className="mt-1 text-zinc-900">
+            {missing.length ? missing.join(", ") : "None"}
+          </dd>
+        </div>
+      </dl>
+    </section>
+  );
+}
+
+function Dashboard({
+  data,
+  garminMissing,
+  garminRedirectUri,
+  garminSession,
+  range,
+}: {
+  data: WhoopDashboardData;
+  garminMissing: string[];
+  garminRedirectUri: string;
+  garminSession?: GarminSession | null;
+  range: number;
+}) {
   const cycles = getRecords<Cycle>(data.cycles);
   const recoveries = getRecords<Recovery>(data.recoveries);
   const sleeps = getRecords<Sleep>(data.sleeps);
@@ -735,6 +1041,12 @@ function Dashboard({ data, range }: { data: WhoopDashboardData; range: number })
   const trendData = buildTrendData(data);
   const profile = data.profile.data;
   const body = data.body.data;
+  const counts = {
+    cycles: cycles.length,
+    recoveries: recoveries.length,
+    sleeps: sleeps.length,
+    workouts: workouts.length,
+  };
 
   return (
     <Shell connected>
@@ -760,6 +1072,8 @@ function Dashboard({ data, range }: { data: WhoopDashboardData; range: number })
       </section>
 
       <DataWarning data={data} />
+
+      <EmptyDataNotice range={range} counts={counts} source={data.source} />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -796,6 +1110,12 @@ function Dashboard({ data, range }: { data: WhoopDashboardData; range: number })
         sleeps={sleeps}
         sleepError={data.sleeps.error}
         range={range}
+      />
+
+      <GarminConnectionPanel
+        missing={garminMissing}
+        redirectUri={garminRedirectUri}
+        session={garminSession}
       />
 
       <AgenticDj songs={DJ_SONG_CATALOG} />
@@ -956,16 +1276,25 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
   const range = parseRange(params.range);
   const authError = firstParam(params.auth_error);
   const disconnected = firstParam(params.disconnected) === "1";
-  const redirectUri = await getDisplayRedirectUri();
+  const garminAuthError = firstParam(params.garmin_auth_error);
+  const garminDisconnected = firstParam(params.garmin_disconnected) === "1";
+  const redirectUris = await getDisplayRedirectUris();
   const config = getConfigStatus();
+  const garminConfig = getGarminConfigStatus();
+  const garminSession = await getGarminSession();
 
   if (!config.isReady) {
     return (
       <ConnectScreen
         authError={authError}
         disconnected={disconnected}
+        garminAuthError={garminAuthError}
+        garminDisconnected={garminDisconnected}
+        garminMissing={garminConfig.missing}
+        garminRedirectUri={redirectUris.garmin}
+        garminSession={garminSession}
         missing={config.missing}
-        redirectUri={redirectUri}
+        redirectUri={redirectUris.whoop}
       />
     );
   }
@@ -977,8 +1306,13 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
       <ConnectScreen
         authError={authError}
         disconnected={disconnected}
+        garminAuthError={garminAuthError}
+        garminDisconnected={garminDisconnected}
+        garminMissing={garminConfig.missing}
+        garminRedirectUri={redirectUris.garmin}
+        garminSession={garminSession}
         missing={[]}
-        redirectUri={redirectUri}
+        redirectUri={redirectUris.whoop}
       />
     );
   }
@@ -992,14 +1326,31 @@ export default async function Home({ searchParams }: { searchParams: SearchParam
       <ConnectScreen
         authError="session_expired"
         disconnected={false}
+        garminAuthError={garminAuthError}
+        garminDisconnected={garminDisconnected}
+        garminMissing={garminConfig.missing}
+        garminRedirectUri={redirectUris.garmin}
+        garminSession={garminSession}
         missing={[]}
-        redirectUri={redirectUri}
+        redirectUri={redirectUris.whoop}
       />
     );
+  }
+
+  if (garminSession && isGarminSessionExpiring(garminSession)) {
+    redirect(`/api/auth/garmin/refresh?next=${encodeURIComponent(`/?range=${range}`)}`);
   }
 
   const data = await getRecentWhoopData(session.accessToken, range);
   await syncWhoopDashboardData(data, session);
 
-  return <Dashboard data={data} range={range} />;
+  return (
+    <Dashboard
+      data={data}
+      garminMissing={garminConfig.missing}
+      garminRedirectUri={redirectUris.garmin}
+      garminSession={garminSession}
+      range={range}
+    />
+  );
 }

@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       session = tokenResponseToSession(token, session);
       refreshedSession = true;
     } catch (error) {
-      console.error("[whoop-diagnostics:refresh_failed]", {
+      console.warn("[whoop-diagnostics:refresh_failed]", {
         userId: session.userId,
         error: error instanceof Error ? error.message : "Unknown refresh failure.",
       });
