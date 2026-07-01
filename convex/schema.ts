@@ -41,4 +41,4 @@ export default defineSchema({
     .index("by_user_workout", ["whoopUserId", "workoutId"])
     .index("by_user_start", ["whoopUserId", "start"])
     .index("by_user_score_state", ["whoopUserId", "scoreState"]),
-});
+})
