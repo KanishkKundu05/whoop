@@ -1,25 +1,37 @@
 import {
   Activity,
+  Apple,
   BadgeCheck,
   BedDouble,
+  Bell,
   Brain,
+  CalendarClock,
   CalendarRange,
   ChartBarStacked,
+  CheckCircle2,
   Clock3,
+  Code2,
+  Compass,
   Download,
   Dumbbell,
   FileText,
   Gauge,
   HeartPulse,
+  Hourglass,
+  LineChart,
   LogIn,
   LogOut,
   Moon,
   RefreshCw,
   Scale,
   ShieldOff,
+  Smartphone,
   Stethoscope,
+  Sunrise,
+  Timer,
   User,
   Watch,
+  Zap,
 } from "lucide-react";
 import { Children } from "react";
 import { headers } from "next/headers";
@@ -27,6 +39,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
+import { APPLE_WATCH_CAPABILITIES } from "@/lib/apple-watch/types";
 import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
 import {
@@ -111,6 +124,18 @@ function formatDuration(milliseconds?: number) {
   return `${hours}h ${minutes}m`;
 }
 
+function formatClockMinutes(minutes?: number) {
+  if (minutes === undefined || Number.isNaN(minutes)) return "—";
+  const normalized = ((Math.round(minutes) % 1440) + 1440) % 1440;
+  const hours = Math.floor(normalized / 60);
+  const mins = normalized % 60;
+
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(new Date(Date.UTC(2024, 0, 1, hours, mins)));
+}
+
 function formatPercent(value?: number | null) {
   return value === undefined || value === null ? "—" : `${formatNumber(value)}%`;
 }
@@ -148,6 +173,39 @@ function getSleepNeedMilliseconds(sleep?: Sleep) {
     needed.need_from_recent_strain_milli -
     needed.need_from_recent_nap_milli
   );
+}
+
+function getTimezoneOffsetMilliseconds(offset?: string) {
+  if (!offset || offset === "Z") return 0;
+
+  const match = offset.match(/^([+-])(\d{2}):(\d{2})$/);
+  if (!match) return 0;
+
+  const [, sign, hours, minutes] = match;
+  const multiplier = sign === "-" ? -1 : 1;
+
+  return multiplier * ((Number(hours) * 60 + Number(minutes)) * 60_000);
+}
+
+function getSleepClockMinutes(sleep: Sleep, field: "start" | "end") {
+  const timestamp = new Date(sleep[field]).getTime();
+  const localTimestamp = timestamp + getTimezoneOffsetMilliseconds(sleep.timezone_offset);
+  const localDate = new Date(localTimestamp);
+
+  return localDate.getUTCHours() * 60 + localDate.getUTCMinutes();
+}
+
+function getAnchoredBedtimeMinutes(sleep: Sleep) {
+  const minutes = getSleepClockMinutes(sleep, "start");
+
+  return minutes < 12 * 60 ? minutes + 24 * 60 : minutes;
+}
+
+function averageAbsoluteDeviation(values: number[]) {
+  if (!values.length) return undefined;
+
+  const mean = average(values) ?? 0;
+  return average(values.map((value) => Math.abs(value - mean)));
 }
 
 function clampPercent(value: number) {
@@ -833,6 +891,264 @@ function buildSleepNotes({
   return notes;
 }
 
+type SleepFeatureSpec = {
+  title: string;
+  status: "Live from WHOOP" | "Derived from WHOOP" | "Needs Apple Watch";
+  value: string;
+  detail: string;
+  source: string;
+  icon: React.ReactNode;
+};
+
+function buildSleepFeatureSpecs(sleeps: Sleep[]): SleepFeatureSpec[] {
+  const scoredSleeps = sleeps
+    .filter(isScored)
+    .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
+  const mainSleeps = scoredSleeps.filter((sleep) => !sleep.nap);
+  const analysedSleeps = mainSleeps.length ? mainSleeps : scoredSleeps;
+  const latestSleep = analysedSleeps[0];
+  const bedtimeSamples = analysedSleeps.map(getAnchoredBedtimeMinutes);
+  const wakeSamples = analysedSleeps.map((sleep) => getSleepClockMinutes(sleep, "end"));
+  const targetBedtime = average(bedtimeSamples);
+  const bedtimeDrift = averageAbsoluteDeviation(bedtimeSamples);
+  const wakeDrift = averageAbsoluteDeviation(wakeSamples);
+  const latestStages = latestSleep?.score?.stage_summary;
+  const latestSleepTime = getSleepTimeMilliseconds(latestSleep);
+  const latestRestorative =
+    latestStages && latestSleepTime
+      ? ((latestStages.total_rem_sleep_time_milli +
+          latestStages.total_slow_wave_sleep_time_milli) /
+          latestSleepTime) *
+        100
+      : undefined;
+  const awakePerHour =
+    latestStages?.total_in_bed_time_milli && latestStages.total_in_bed_time_milli > 0
+      ? latestStages.total_awake_time_milli /
+        (latestStages.total_in_bed_time_milli / 60 / 60 / 1000)
+      : undefined;
+  const latestSleepNeed = getSleepNeedMilliseconds(latestSleep);
+  const latestSleepDebt = latestSleep?.score?.sleep_needed.need_from_sleep_debt_milli;
+  const debtCoverage =
+    latestSleepDebt && latestSleepTime
+      ? clampPercent((latestSleepTime / latestSleepDebt) * 100)
+      : undefined;
+  const napCredit = latestSleep?.score?.sleep_needed.need_from_recent_nap_milli;
+
+  return [
+    {
+      title: "Bedtime compass",
+      status: "Derived from WHOOP",
+      value: formatClockMinutes(targetBedtime),
+      detail:
+        bedtimeDrift === undefined
+          ? "Needs more scored sleeps"
+          : `Average start-time drift is ${formatDuration(bedtimeDrift * 60_000)}.`,
+      source:
+        "Uses WHOOP sleep start timestamps. It is a target bedtime, not true sleep-onset latency.",
+      icon: <Compass size={18} />,
+    },
+    {
+      title: "Consistency watch",
+      status: "Live from WHOOP",
+      value: formatPercent(latestSleep?.score?.sleep_consistency_percentage),
+      detail:
+        wakeDrift === undefined
+          ? "Waiting for wake-time samples"
+          : `Wake timing is drifting ${formatDuration(wakeDrift * 60_000)} on average.`,
+      source: "Uses WHOOP sleep_consistency_percentage plus start/end timing.",
+      icon: <CalendarClock size={18} />,
+    },
+    {
+      title: "Debt payoff",
+      status: "Derived from WHOOP",
+      value: debtCoverage === undefined ? "—" : `${formatNumber(debtCoverage)}%`,
+      detail: `${formatDuration(latestSleepDebt)} debt against ${formatDuration(latestSleepNeed)} total need.`,
+      source: "Uses WHOOP sleep_needed baseline, debt, strain, and nap components.",
+      icon: <Hourglass size={18} />,
+    },
+    {
+      title: "Restorative yield",
+      status: "Derived from WHOOP",
+      value: formatPercent(latestRestorative),
+      detail: `${formatNumber(latestStages?.sleep_cycle_count)} cycles · ${formatNumber(latestStages?.disturbance_count)} disturbances.`,
+      source: "Combines REM and slow-wave sleep from WHOOP stage_summary.",
+      icon: <LineChart size={18} />,
+    },
+    {
+      title: "Awake tax",
+      status: "Derived from WHOOP",
+      value: formatDuration(awakePerHour),
+      detail: "Awake minutes per hour in bed during the latest scored sleep.",
+      source: "Uses total_awake_time_milli and total_in_bed_time_milli.",
+      icon: <Timer size={18} />,
+    },
+    {
+      title: "Nap leverage",
+      status: "Derived from WHOOP",
+      value: formatDuration(Math.abs(napCredit ?? 0)),
+      detail:
+        napCredit && napCredit < 0
+          ? "Recent naps are reducing tonight's calculated need."
+          : "No meaningful nap credit in the latest sleep-needed breakdown.",
+      source: "Uses need_from_recent_nap_milli from WHOOP sleep_needed.",
+      icon: <Zap size={18} />,
+    },
+    {
+      title: "Sleep latency",
+      status: "Needs Apple Watch",
+      value: "Planned",
+      detail:
+        "WHOOP public sleep records do not expose time-to-fall-asleep directly.",
+      source:
+        "Requires HealthKit in-bed and asleep category samples from an iOS/watchOS companion app.",
+      icon: <Moon size={18} />,
+    },
+    {
+      title: "Wind-down nudge",
+      status: "Needs Apple Watch",
+      value: targetBedtime === undefined ? "Planned" : formatClockMinutes(targetBedtime - 45),
+      detail: "A watch widget could alert before the derived target bedtime.",
+      source:
+        "Uses WHOOP timing now; gets sharper with Apple Watch sleep schedule and focus data later.",
+      icon: <Bell size={18} />,
+    },
+  ];
+}
+
+function SleepFeatureSpecDashboard({
+  sleeps,
+  range,
+}: {
+  sleeps: Sleep[];
+  range: number;
+}) {
+  const specs = buildSleepFeatureSpecs(sleeps);
+
+  return (
+    <section className="border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col gap-3 border-b border-zinc-200 pb-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-zinc-950">
+            Sleep widget spec dashboard
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-zinc-500">
+            Creative widgets for the last {range} days, split between metrics
+            the WHOOP API exposes today and Apple Watch ideas that need a native
+            HealthKit bridge.
+          </p>
+        </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-lg bg-zinc-950 px-3 py-2 text-sm font-semibold text-white">
+          <Code2 size={16} />
+          Feature specs
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {specs.map((spec) => (
+          <SpecWidget key={spec.title} spec={spec} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SpecWidget({ spec }: { spec: SleepFeatureSpec }) {
+  const statusStyles = {
+    "Live from WHOOP": "bg-lime-50 text-lime-800",
+    "Derived from WHOOP": "bg-cyan-50 text-cyan-800",
+    "Needs Apple Watch": "bg-zinc-100 text-zinc-700",
+  };
+
+  return (
+    <article className="flex min-h-64 flex-col border border-zinc-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-950 text-white">
+          {spec.icon}
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusStyles[spec.status]}`}>
+          {spec.status}
+        </span>
+      </div>
+      <h4 className="mt-4 text-sm font-semibold text-zinc-950">{spec.title}</h4>
+      <p className="mt-2 text-2xl font-semibold tracking-normal text-zinc-950">
+        {spec.value}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-zinc-600">{spec.detail}</p>
+      <p className="mt-auto border-t border-zinc-100 pt-3 text-xs leading-5 text-zinc-500">
+        {spec.source}
+      </p>
+    </article>
+  );
+}
+
+function AppleWatchSupportPanel() {
+  const statusLabels = {
+    ready: "Dashboard skeleton ready",
+    planned: "Planned",
+    "needs-native-app": "Needs native app",
+  };
+
+  return (
+    <section className="border border-zinc-200 bg-white p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-white">
+            <Apple size={20} />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold tracking-normal text-zinc-950">
+              Apple Watch support
+            </h3>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">
+              Skeleton for a future iOS/watchOS HealthKit bridge. The web app
+              can display and normalize Apple Watch summaries, but the watch
+              data must be collected by a native companion app.
+            </p>
+          </div>
+        </div>
+        <a
+          href="/api/apple-watch/manifest"
+          className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"
+        >
+          <Smartphone size={16} />
+          Manifest
+        </a>
+      </div>
+
+      <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {APPLE_WATCH_CAPABILITIES.map((capability) => (
+          <div key={capability.name} className="border border-zinc-200 bg-zinc-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-zinc-900">
+                {capability.status === "ready" ? (
+                  <CheckCircle2 size={17} />
+                ) : capability.status === "planned" ? (
+                  <Sunrise size={17} />
+                ) : (
+                  <Watch size={17} />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-zinc-950">
+                  {capability.name}
+                </p>
+                <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-zinc-500">
+                  {statusLabels[capability.status]}
+                </p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-zinc-600">
+              {capability.detail}
+            </p>
+            <p className="mt-3 text-xs font-medium text-zinc-500">
+              Source: {capability.source}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function DataWarning({ data }: { data: WhoopDashboardData }) {
   const failures = [
     ["Profile", data.profile],
@@ -1112,11 +1428,15 @@ function Dashboard({
         range={range}
       />
 
+      <SleepFeatureSpecDashboard sleeps={sleeps} range={range} />
+
       <GarminConnectionPanel
         missing={garminMissing}
         redirectUri={garminRedirectUri}
         session={garminSession}
       />
+
+      <AppleWatchSupportPanel />
 
       <AgenticDj songs={DJ_SONG_CATALOG} />
 

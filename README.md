@@ -1,6 +1,6 @@
-# WHOOP + Garmin Dashboard
+# WHOOP + Garmin + Apple Watch Dashboard
 
-A private Next.js dashboard for WHOOP API data with optional Garmin API account linking. It implements separate WHOOP OAuth and Garmin OAuth 2.0 PKCE flows, stores provider tokens in separate encrypted HTTP-only cookies, refreshes access tokens server-side, displays recent WHOOP profile, body, recovery, cycle, sleep, and workout data, and includes an Agentic DJ that matches SoundCloud tracks to the freshest WHOOP heart-rate signal available through the API.
+A private Next.js dashboard for WHOOP API data with optional Garmin API account linking and an Apple Watch/HealthKit support skeleton. It implements separate WHOOP OAuth and Garmin OAuth 2.0 PKCE flows, stores provider tokens in separate encrypted HTTP-only cookies, refreshes access tokens server-side, displays recent WHOOP profile, body, recovery, cycle, sleep, and workout data, and includes an Agentic DJ that matches SoundCloud tracks to the freshest WHOOP heart-rate signal available through the API.
 
 ## Try the Deployed App
 
@@ -133,6 +133,31 @@ Garmin uses OAuth 2.0 with PKCE for the Garmin Connect Developer Program. This a
 
 Garmin API permissions are selected in the Garmin developer portal and by the user during consent, so the app does not send a `scope` parameter.
 
+## Apple Watch Support Skeleton
+
+The dashboard includes an Apple Watch support panel and a manifest route at
+`/api/apple-watch/manifest`. This is intentionally a skeleton: HealthKit data
+cannot be read directly by the web app, so real Apple Watch support requires an
+iOS/watchOS companion app that requests HealthKit permissions and sends
+summarized samples to this server.
+
+The planned HealthKit bridge covers sleep analysis, heart rate, HRV, resting
+heart rate, respiratory rate, wrist temperature, and workouts.
+
+## Sleep Widget Specs
+
+The dashboard includes a sleep widget spec section for metrics beyond the
+standard WHOOP app widgets. WHOOP-derived ideas include bedtime compass, sleep
+consistency drift, sleep debt payoff, restorative yield, awake tax, and nap
+leverage. Apple Watch-dependent ideas include true sleep latency and wind-down
+nudges from HealthKit in-bed/asleep samples.
+
+WHOOP exposes sleep start/end timestamps, stage summaries, sleep-needed
+breakdowns, performance, consistency, and efficiency through the public API. It
+does not expose a direct time-to-fall-asleep field in the public sleep schema,
+so the dashboard treats bedtime guidance as derived timing until Apple Health
+data is connected.
+
 ## Agentic DJ
 
 After connecting WHOOP, the dashboard shows an **Agentic DJ** panel. Click **Start** to poll the server for a recommendation. The server reads the latest available WHOOP heart-rate signal, selects the closest matching song from the local BPM-tagged SoundCloud catalogue, and the client plays it through the SoundCloud Widget API.
@@ -207,6 +232,7 @@ derives the callback URL from the current request host instead.
 - `/api/auth/garmin/refresh` refreshes and rotates the Garmin token session.
 - `/api/auth/garmin/disconnect` revokes Garmin access and clears the local session.
 - `/api/garmin/diagnostics` returns Garmin configuration and session diagnostics.
+- `/api/apple-watch/manifest` returns the planned Apple Watch/HealthKit bridge capabilities.
 - `/api/whoop/export?range=30` returns the same dashboard data as JSON for the current browser session.
 - `/api/dj/recommendation` returns the current Agentic DJ recommendation for a connected session.
 
