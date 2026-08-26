@@ -39,6 +39,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AgenticDj } from "@/components/agentic-dj";
 import { MetricTrendChart, type MetricTrendPoint } from "@/components/metric-trend-chart";
+import { WhoopShareCardDemo } from "@/components/whoop-share-card-demo";
 import { APPLE_WATCH_CAPABILITIES } from "@/lib/apple-watch/types";
 import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { DJ_SONG_CATALOG } from "@/lib/dj/catalog";
@@ -1421,6 +1422,12 @@ function Dashboard({
           tone="zinc"
         />
       </section>
+
+      <WhoopShareCardDemo
+        memberName={profile?.first_name}
+        recovery={latestRecovery}
+        sleep={latestSleep}
+      />
 
       <SleepAnalyser
         sleeps={sleeps}
