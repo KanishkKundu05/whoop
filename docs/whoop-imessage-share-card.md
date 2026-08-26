@@ -51,6 +51,52 @@ WHOOP does not expose a direct "time to fall asleep" field in the public sleep s
 
 ## Technical Implementation
 
+### How To Try It On Vercel
+
+Use this route for a clean first-time demo:
+
+```text
+https://whoop-delta-sable.vercel.app/imessage
+```
+
+Expected flow:
+
+1. Open `/imessage`.
+2. Click **Connect WHOOP**.
+3. Approve the WHOOP OAuth scopes.
+4. WHOOP redirects back to `/imessage`.
+5. The page renders the "how u feeling?" conversation and the WHOOP share card.
+
+The dashboard uses a safe `next` path during OAuth:
+
+```text
+/api/auth/whoop?next=/imessage
+```
+
+The auth callback stores the encrypted WHOOP session in an HTTP-only cookie and returns the user to `/imessage`. If the user later opens `/imessage` with an expiring session, the page sends them through `/api/auth/refresh?next=/imessage`.
+
+### Authentication Requirements
+
+Before anyone can try the Vercel demo, the deployment needs:
+
+- `WHOOP_CLIENT_ID`
+- `WHOOP_CLIENT_SECRET`
+- `WHOOP_SESSION_SECRET`
+
+The WHOOP developer app must allow this redirect URI:
+
+```text
+https://whoop-delta-sable.vercel.app/api/auth/whoop/callback
+```
+
+The OAuth scopes requested by the app are:
+
+```text
+offline read:profile read:body_measurement read:recovery read:cycles read:sleep read:workout
+```
+
+The share card is usable only after the visitor authenticates their own WHOOP account and has scored sleep and recovery records available through the API. Friends who receive the final iMessage card do not need to authenticate unless they tap into a future private detail page.
+
 ### Web Dashboard Demo
 
 Implemented in this repo as a server-rendered dashboard section:
@@ -58,6 +104,7 @@ Implemented in this repo as a server-rendered dashboard section:
 - Component: `src/components/whoop-share-card-demo.tsx`
 - Data source: latest scored `Sleep` and `Recovery` records already fetched for the dashboard.
 - Dashboard insertion: `src/app/page.tsx`
+- Dedicated first-time route: `src/app/imessage/page.tsx`
 - Rendering: static iMessage-style conversation with one incoming text bubble, one outgoing summary bubble, and one WHOOP share card.
 
 This is enough for a product demo because the card uses real connected WHOOP data when the dashboard session has sleep and recovery records.
@@ -107,6 +154,8 @@ Implementation files:
 
 - `src/lib/whoop/share-card.ts`
 - `src/app/api/whoop/share-card/route.ts`
+- `src/app/api/auth/whoop/route.ts`
+- `src/app/api/auth/whoop/callback/route.ts`
 
 ### Privacy Rules
 

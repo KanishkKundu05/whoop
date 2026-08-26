@@ -12,6 +12,7 @@ import type { WhoopSession } from "./types";
 
 export const WHOOP_SESSION_COOKIE = "__whoop_session";
 export const WHOOP_OAUTH_STATE_COOKIE = "__whoop_oauth_state";
+export const WHOOP_OAUTH_NEXT_COOKIE = "__whoop_oauth_next";
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 const STATE_MAX_AGE_SECONDS = 60 * 10;
@@ -109,6 +110,14 @@ export function setOAuthStateCookie(response: NextResponse, state: string) {
   );
 }
 
+export function setOAuthNextCookie(response: NextResponse, nextPath: string) {
+  response.cookies.set(
+    WHOOP_OAUTH_NEXT_COOKIE,
+    nextPath,
+    getCookieOptions(STATE_MAX_AGE_SECONDS),
+  );
+}
+
 export function clearWhoopCookies(response: NextResponse) {
   response.cookies.set(WHOOP_SESSION_COOKIE, "", {
     ...getCookieOptions(0),
@@ -118,9 +127,12 @@ export function clearWhoopCookies(response: NextResponse) {
     ...getCookieOptions(0),
     maxAge: 0,
   });
+  response.cookies.set(WHOOP_OAUTH_NEXT_COOKIE, "", {
+    ...getCookieOptions(0),
+    maxAge: 0,
+  });
 }
 
 export function isSessionExpiring(session: WhoopSession, withinMs = 60_000) {
   return session.expiresAt <= Date.now() + withinMs;
 }
-
