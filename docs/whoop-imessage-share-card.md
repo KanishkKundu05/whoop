@@ -75,6 +75,58 @@ The dashboard uses a safe `next` path during OAuth:
 
 The auth callback stores the encrypted WHOOP session in an HTTP-only cookie and returns the user to `/imessage`. If the user later opens `/imessage` with an expiring session, the page sends them through `/api/auth/refresh?next=/imessage`.
 
+### How To Use It In The Real Messages App
+
+Native Xcode project:
+
+```text
+ios/WhoopShare/WhoopShare.xcodeproj
+```
+
+Install flow for your iPhone:
+
+1. Open `ios/WhoopShare/WhoopShare.xcodeproj` in Xcode.
+2. Select the `WhoopShare` app target.
+3. Set your Apple developer team for both targets:
+   - `WhoopShare`
+   - `WhoopShareMessagesExtension`
+4. Enable the same App Group for both targets:
+
+```text
+group.com.kanishkkundu.whoopshare
+```
+
+5. Plug in your iPhone and run the `WhoopShare` scheme on the device.
+6. On the phone, open the Vercel `/imessage` page in Safari.
+7. Connect WHOOP and wait for the share card to render.
+8. Tap **Open in app**. This opens the installed native app through:
+
+```text
+whoopshare://import?payload=...
+```
+
+9. The native app stores the latest share-card payload in the App Group container.
+10. Open Messages, choose a conversation, open the Messages app drawer, select **Whoop Share**, and tap **Send WHOOP card**.
+
+The Messages extension sends an actual `MSMessage` using `MSMessageTemplateLayout`. It reads from the shared App Group rather than calling WHOOP directly from the extension.
+
+Implementation files:
+
+- `ios/WhoopShare/project.yml`
+- `ios/WhoopShare/WhoopShare.xcodeproj`
+- `ios/WhoopShare/Sources/WhoopShareApp/WhoopShareApp.swift`
+- `ios/WhoopShare/Sources/WhoopShareApp/ContentView.swift`
+- `ios/WhoopShare/Sources/MessagesExtension/MessagesViewController.swift`
+- `ios/WhoopShare/Sources/Shared/ShareCardPayload.swift`
+- `ios/WhoopShare/Sources/Shared/ShareCardStore.swift`
+
+Why this flow exists:
+
+- The WHOOP client secret stays on the Vercel server.
+- The user authenticates with WHOOP through the existing web OAuth flow.
+- The native app receives only the privacy-safe share-card payload.
+- The Messages extension has fast local access to the latest card and does not need to run OAuth inside Messages.
+
 ### Authentication Requirements
 
 Before anyone can try the Vercel demo, the deployment needs:

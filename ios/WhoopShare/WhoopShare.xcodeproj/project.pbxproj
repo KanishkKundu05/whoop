@@ -1,0 +1,458 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0668F792EF2BE0E4F343062A /* ShareCardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF8F25403A5C4D0047629C5 /* ShareCardStore.swift */; };
+		1A361520065B777037A844A9 /* ShareCardPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF4D2ED9C2CAA15E4CE11AE /* ShareCardPayload.swift */; };
+		35D12E3554FCDD687BD1B3D0 /* ShareCardModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7563D21B9CC399E116859E80 /* ShareCardModel.swift */; };
+		3FAE4B83EA2B9205C42A70D7 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31473987DF5CA7BFBC63AC0D /* MessagesViewController.swift */; };
+		B8EA60E4DF78A05399FEDEAF /* ShareCardStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF8F25403A5C4D0047629C5 /* ShareCardStore.swift */; };
+		C4A23045FFB9AFF339C3AE15 /* WhoopShareMessagesExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 2C5F0E1F4E51112428B08943 /* WhoopShareMessagesExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CB32267500F57708C608AE22 /* ShareCardPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFF4D2ED9C2CAA15E4CE11AE /* ShareCardPayload.swift */; };
+		D97F845D75F57E9CAA8D7F81 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30EA97FF14B6E33E1191DC57 /* ContentView.swift */; };
+		F8DCC882F7C413DCEAB22534 /* WhoopShareApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0766E65781CF9E2705425D2 /* WhoopShareApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		40DF9B1B6A0817A998086CDC /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3A9BBF6CD7AD0FBB54A3945A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5E9C62C73228DD2C80EF39DD;
+			remoteInfo = WhoopShareMessagesExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9ABBE54DC69D05AE2CBE974D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C4A23045FFB9AFF339C3AE15 /* WhoopShareMessagesExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1DCD21B147C48173EA7E3A2D /* WhoopShare.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = WhoopShare.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		277E712432C849C2EEDF1E3D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2C5F0E1F4E51112428B08943 /* WhoopShareMessagesExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = WhoopShareMessagesExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		30EA97FF14B6E33E1191DC57 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		31473987DF5CA7BFBC63AC0D /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
+		3DEF7E54325CABB5EC11A707 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		60653BD663D12B64B32B3F6B /* WhoopShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhoopShare.entitlements; sourceTree = "<group>"; };
+		7563D21B9CC399E116859E80 /* ShareCardModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardModel.swift; sourceTree = "<group>"; };
+		9593C5C87ACE1910E6ABD4FA /* WhoopShareMessagesExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WhoopShareMessagesExtension.entitlements; sourceTree = "<group>"; };
+		BDF8F25403A5C4D0047629C5 /* ShareCardStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardStore.swift; sourceTree = "<group>"; };
+		BFF4D2ED9C2CAA15E4CE11AE /* ShareCardPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardPayload.swift; sourceTree = "<group>"; };
+		F0766E65781CF9E2705425D2 /* WhoopShareApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhoopShareApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		6FA74993B42565194CAE7236 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1DCD21B147C48173EA7E3A2D /* WhoopShare.app */,
+				2C5F0E1F4E51112428B08943 /* WhoopShareMessagesExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		872B75A08A40E461E0692DEA /* MessagesExtension */ = {
+			isa = PBXGroup;
+			children = (
+				277E712432C849C2EEDF1E3D /* Info.plist */,
+				31473987DF5CA7BFBC63AC0D /* MessagesViewController.swift */,
+				9593C5C87ACE1910E6ABD4FA /* WhoopShareMessagesExtension.entitlements */,
+			);
+			name = MessagesExtension;
+			path = Sources/MessagesExtension;
+			sourceTree = "<group>";
+		};
+		B649A4053F46E7F0B7B52008 = {
+			isa = PBXGroup;
+			children = (
+				872B75A08A40E461E0692DEA /* MessagesExtension */,
+				E2FEA35493E7010A2820C97E /* Shared */,
+				FF12FA6297D08CDB7319D021 /* WhoopShareApp */,
+				6FA74993B42565194CAE7236 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E2FEA35493E7010A2820C97E /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				BFF4D2ED9C2CAA15E4CE11AE /* ShareCardPayload.swift */,
+				BDF8F25403A5C4D0047629C5 /* ShareCardStore.swift */,
+			);
+			name = Shared;
+			path = Sources/Shared;
+			sourceTree = "<group>";
+		};
+		FF12FA6297D08CDB7319D021 /* WhoopShareApp */ = {
+			isa = PBXGroup;
+			children = (
+				30EA97FF14B6E33E1191DC57 /* ContentView.swift */,
+				3DEF7E54325CABB5EC11A707 /* Info.plist */,
+				7563D21B9CC399E116859E80 /* ShareCardModel.swift */,
+				60653BD663D12B64B32B3F6B /* WhoopShare.entitlements */,
+				F0766E65781CF9E2705425D2 /* WhoopShareApp.swift */,
+			);
+			name = WhoopShareApp;
+			path = Sources/WhoopShareApp;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		5E9C62C73228DD2C80EF39DD /* WhoopShareMessagesExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B0C454682745DF5EF4FD1D76 /* Build configuration list for PBXNativeTarget "WhoopShareMessagesExtension" */;
+			buildPhases = (
+				DF994D8D54F1D0DCF6A5776E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = WhoopShareMessagesExtension;
+			packageProductDependencies = (
+			);
+			productName = WhoopShareMessagesExtension;
+			productReference = 2C5F0E1F4E51112428B08943 /* WhoopShareMessagesExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		94874C610FCA8381454E2B68 /* WhoopShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BD335E97464808C21D4D466 /* Build configuration list for PBXNativeTarget "WhoopShare" */;
+			buildPhases = (
+				58430FBF645B64275C62A04C /* Sources */,
+				9ABBE54DC69D05AE2CBE974D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				39E9738A1358543DDE06A47B /* PBXTargetDependency */,
+			);
+			name = WhoopShare;
+			packageProductDependencies = (
+			);
+			productName = WhoopShare;
+			productReference = 1DCD21B147C48173EA7E3A2D /* WhoopShare.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3A9BBF6CD7AD0FBB54A3945A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					5E9C62C73228DD2C80EF39DD = {
+						ProvisioningStyle = Automatic;
+					};
+					94874C610FCA8381454E2B68 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = D7A41E3B6EDC4DC949C3E838 /* Build configuration list for PBXProject "WhoopShare" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B649A4053F46E7F0B7B52008;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				94874C610FCA8381454E2B68 /* WhoopShare */,
+				5E9C62C73228DD2C80EF39DD /* WhoopShareMessagesExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		58430FBF645B64275C62A04C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D97F845D75F57E9CAA8D7F81 /* ContentView.swift in Sources */,
+				35D12E3554FCDD687BD1B3D0 /* ShareCardModel.swift in Sources */,
+				CB32267500F57708C608AE22 /* ShareCardPayload.swift in Sources */,
+				0668F792EF2BE0E4F343062A /* ShareCardStore.swift in Sources */,
+				F8DCC882F7C413DCEAB22534 /* WhoopShareApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DF994D8D54F1D0DCF6A5776E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3FAE4B83EA2B9205C42A70D7 /* MessagesViewController.swift in Sources */,
+				1A361520065B777037A844A9 /* ShareCardPayload.swift in Sources */,
+				B8EA60E4DF78A05399FEDEAF /* ShareCardStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		39E9738A1358543DDE06A47B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5E9C62C73228DD2C80EF39DD /* WhoopShareMessagesExtension */;
+			targetProxy = 40DF9B1B6A0817A998086CDC /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		083B7EB931B4F865A0C12798 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		50C1490DF7FBE2246EE74B67 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		5A558608813F2BC033AAD1CB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/WhoopShareApp/WhoopShare.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/WhoopShareApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kanishkkundu.whoopshare;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8C730E0D229988FA6F1C6D2C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/WhoopShareApp/WhoopShare.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/WhoopShareApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kanishkkundu.whoopshare;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F7A89C61694414E3EC3008DE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Sources/MessagesExtension/WhoopShareMessagesExtension.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kanishkkundu.whoopshare.MessagesExtension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F7B7CD525534078E822BAB22 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Sources/MessagesExtension/WhoopShareMessagesExtension.entitlements;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/MessagesExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kanishkkundu.whoopshare.MessagesExtension;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0BD335E97464808C21D4D466 /* Build configuration list for PBXNativeTarget "WhoopShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8C730E0D229988FA6F1C6D2C /* Debug */,
+				5A558608813F2BC033AAD1CB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B0C454682745DF5EF4FD1D76 /* Build configuration list for PBXNativeTarget "WhoopShareMessagesExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F7B7CD525534078E822BAB22 /* Debug */,
+				F7A89C61694414E3EC3008DE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D7A41E3B6EDC4DC949C3E838 /* Build configuration list for PBXProject "WhoopShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				083B7EB931B4F865A0C12798 /* Debug */,
+				50C1490DF7FBE2246EE74B67 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3A9BBF6CD7AD0FBB54A3945A /* Project object */;
+}
