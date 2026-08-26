@@ -15,11 +15,24 @@ struct ContentView: View {
                             .foregroundStyle(.secondary)
                     }
 
-                    Link(destination: model.setupURL) {
-                        Label("Open Vercel setup", systemImage: "safari")
-                            .frame(maxWidth: .infinity)
+                    Button {
+                        model.refreshFromWhoop()
+                    } label: {
+                        Label(
+                            model.isRefreshing ? "Refreshing..." : "Refresh from WHOOP",
+                            systemImage: model.isRefreshing ? "arrow.triangle.2.circlepath" : "heart.text.square"
+                        )
+                        .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(model.isRefreshing)
+
+                    Link(destination: model.setupURL) {
+                        Label("Open web setup", systemImage: "safari")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
                     .controlSize(.large)
 
                     Text(model.statusMessage)
@@ -34,9 +47,8 @@ struct ContentView: View {
 
                     VStack(alignment: .leading, spacing: 10) {
                         Label("Install this app on your iPhone from Xcode.", systemImage: "1.circle")
-                        Label("Open Vercel setup and connect WHOOP.", systemImage: "2.circle")
-                        Label("Tap Open in app on the Vercel page.", systemImage: "3.circle")
-                        Label("Open Messages, select Whoop Share, and send the card.", systemImage: "4.circle")
+                        Label("Tap Refresh from WHOOP and approve access.", systemImage: "2.circle")
+                        Label("Open Messages, select Whoop Share, and send the card.", systemImage: "3.circle")
                     }
                     .font(.callout)
                     .foregroundStyle(.secondary)

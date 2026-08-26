@@ -108,6 +108,8 @@ whoopshare://import?payload=...
 9. The native app stores the latest share-card payload in the App Group container.
 10. Open Messages, choose a conversation, open the Messages app drawer, select **Whoop Share**, and tap **Send WHOOP card**.
 
+For a fresh sync, tap **Refresh from WHOOP** in the installed app. The app opens the existing secure web OAuth flow, then imports the privacy-safe card back through the `whoopshare://` callback. This keeps the WHOOP client secret on the server and keeps network work out of the Messages compose flow.
+
 The Messages extension sends an actual `MSMessage` using `MSMessageTemplateLayout`. It reads from the shared App Group rather than calling WHOOP directly from the extension.
 
 Implementation files:
