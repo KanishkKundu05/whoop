@@ -359,6 +359,13 @@ function Shell({
             {connected ? (
               <>
                 <Link
+                  href="/daily-message"
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"
+                >
+                  <Bell size={16} />
+                  Mom text
+                </Link>
+                <Link
                   href="/"
                   className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"
                 >

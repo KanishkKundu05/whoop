@@ -136,6 +136,50 @@ To publish your own data:
 
 The public page intentionally omits email and body measurements.
 
+## Wake-Triggered Linq Message
+
+The app can send a message to a configured recipient when WHOOP reports that
+your main sleep was updated and scored:
+
+```text
+Good morning Mom - I woke up at 7:12 AM, slept 7h 34m, and went to sleep at 11:18 PM last night.
+```
+
+It uses the WHOOP `sleep.updated` webhook as the primary trigger, fetches that
+sleep from the WHOOP API, waits for a scored non-nap sleep, and sends through
+Linq over iMessage/RCS/SMS. The sleep `end` timestamp is used as the wake-up
+time. The Vercel Cron Job at `/api/messages/daily/cron` is only a reconciliation
+fallback for missed webhooks; sends are de-duplicated by WHOOP sleep id.
+
+Setup:
+
+1. Add these environment variables locally and in Vercel Production:
+
+```text
+DAILY_MESSAGE_SECRET=replace-with-at-least-32-random-characters
+LINQ_API_KEY=your-linq-api-key
+LINQ_PREFERRED_SERVICE=optional-iMessage-RCS-or-SMS
+DAILY_MESSAGE_GREETING=Good morning Mom
+WHOOP_WEBHOOK_SECRET=optional-whoop-webhook-secret-if-different-from-client-secret
+CRON_SECRET=optional-reconciliation-cron-secret
+```
+
+2. Connect WHOOP, then open `/daily-message`.
+3. Enter the recipient phone number in E.164 format, such as `+14155552671`.
+4. In the WHOOP Developer Dashboard, add this webhook URL:
+
+```text
+https://your-vercel-domain.vercel.app/api/whoop/webhook
+```
+
+The setup stores the WHOOP access token, WHOOP refresh token, and recipient
+phone number encrypted in Convex. The webhook route validates
+`X-WHOOP-Signature` and `X-WHOOP-Signature-Timestamp`. If
+`WHOOP_WEBHOOK_SECRET` is unset, it falls back to `WHOOP_CLIENT_SECRET`.
+The reconciliation cron route requires
+`Authorization: Bearer $CRON_SECRET`, which Vercel sends automatically for
+cron invocations when `CRON_SECRET` is configured.
+
 ## WHOOP Scopes
 
 The app requests these scopes:
