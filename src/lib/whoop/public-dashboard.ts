@@ -28,7 +28,7 @@ type PublicWhoopDashboard = {
 const publicDashboardQuery = makeFunctionReference<
   "query",
   {
-    whoopUserId: number;
+    whoopUserId?: number;
     rangeDays: number;
     start: string;
   },
@@ -50,7 +50,6 @@ export function getPublicDashboardStatus() {
   const missing: string[] = [];
 
   if (!getConvexUrl()) missing.push("NEXT_PUBLIC_CONVEX_URL");
-  if (!getPublicWhoopUserId()) missing.push("WHOOP_PUBLIC_USER_ID");
 
   return {
     isReady: missing.length === 0,
@@ -71,7 +70,7 @@ export async function fetchPublicWhoopDashboard(rangeDays = 7) {
   return fetchQuery(
     publicDashboardQuery,
     {
-      whoopUserId,
+      ...(whoopUserId ? { whoopUserId } : {}),
       rangeDays,
       start,
     },

@@ -128,10 +128,11 @@ sleep, recovery, cycle strain, and workout summaries for the configured user.
 To publish your own data:
 
 1. Connect WHOOP at `/` and wait for the dashboard to load once.
-2. Copy the `Public setup id` shown near the bottom of the private dashboard.
-3. Set `WHOOP_PUBLIC_USER_ID=your-whoop-user-id` locally and in production.
-4. Keep `NEXT_PUBLIC_CONVEX_URL` configured so the public route can read the
+2. Keep `NEXT_PUBLIC_CONVEX_URL` configured so the public route can read the
    stored data.
+3. Optionally set `WHOOP_PUBLIC_USER_ID=your-whoop-user-id` to pin the public
+   page to one user. If it is omitted, `/public` uses the latest synced WHOOP
+   user in Convex.
 
 The public page intentionally omits email and body measurements.
 

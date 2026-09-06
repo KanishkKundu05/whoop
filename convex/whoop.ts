@@ -166,25 +166,48 @@ export const latestSleeps = query({
 
 export const publicDashboard = query({
   args: {
-    whoopUserId: v.number(),
+    whoopUserId: v.optional(v.number()),
     rangeDays: v.number(),
     start: v.string(),
   },
   handler: async (ctx, args) => {
     const rangeDays = Math.min(Math.max(args.rangeDays, 1), 14);
     const limit = 25;
+    const latestFetch = args.whoopUserId
+      ? null
+      : await ctx.db
+          .query("dashboardFetches")
+          .withIndex("by_fetched_at")
+          .order("desc")
+          .first();
+    const whoopUserId = args.whoopUserId ?? latestFetch?.whoopUserId;
+
+    if (!whoopUserId) {
+      return {
+        rangeDays,
+        start: args.start,
+        user: null,
+        body: null,
+        latestFetch: null,
+        latestFetches: [],
+        cycles: [],
+        recoveries: [],
+        sleeps: [],
+        workouts: [],
+      };
+    }
 
     const user = await ctx.db
       .query("whoopUsers")
       .withIndex("by_whoop_user_id", (q) =>
-        q.eq("whoopUserId", args.whoopUserId),
+        q.eq("whoopUserId", whoopUserId),
       )
       .unique();
 
     const body = await ctx.db
       .query("bodyMeasurements")
       .withIndex("by_user", (q) =>
-        q.eq("whoopUserId", args.whoopUserId),
+        q.eq("whoopUserId", whoopUserId),
       )
       .unique();
 
@@ -193,35 +216,35 @@ export const publicDashboard = query({
         ctx.db
           .query("dashboardFetches")
           .withIndex("by_user_fetched_at", (q) =>
-            q.eq("whoopUserId", args.whoopUserId),
+            q.eq("whoopUserId", whoopUserId),
           )
           .order("desc")
           .take(5),
         ctx.db
           .query("cycles")
           .withIndex("by_user_start", (q) =>
-            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+            q.eq("whoopUserId", whoopUserId).gte("start", args.start),
           )
           .order("desc")
           .take(limit),
         ctx.db
           .query("recoveries")
           .withIndex("by_user_created_at", (q) =>
-            q.eq("whoopUserId", args.whoopUserId).gte("createdAt", args.start),
+            q.eq("whoopUserId", whoopUserId).gte("createdAt", args.start),
           )
           .order("desc")
           .take(limit),
         ctx.db
           .query("sleeps")
           .withIndex("by_user_start", (q) =>
-            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+            q.eq("whoopUserId", whoopUserId).gte("start", args.start),
           )
           .order("desc")
           .take(limit),
         ctx.db
           .query("workouts")
           .withIndex("by_user_start", (q) =>
-            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+            q.eq("whoopUserId", whoopUserId).gte("start", args.start),
           )
           .order("desc")
           .take(limit),
