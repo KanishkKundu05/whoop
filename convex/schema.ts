@@ -30,6 +30,7 @@ export default defineSchema({
   recoveries: defineTable(recoveryFields)
     .index("by_user_cycle", ["whoopUserId", "cycleId"])
     .index("by_user_sleep", ["whoopUserId", "sleepId"])
+    .index("by_user_created_at", ["whoopUserId", "createdAt"])
     .index("by_user_score_state", ["whoopUserId", "scoreState"]),
 
   sleeps: defineTable(sleepFields)

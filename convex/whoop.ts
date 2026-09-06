@@ -1,8 +1,5 @@
 import { v } from "convex/values";
-import {
-  mutationGeneric as mutation,
-  queryGeneric as query,
-} from "convex/server";
+import { mutation, query } from "./_generated/server";
 import {
   bodyMeasurementValidator,
   cycleValidator,
@@ -164,5 +161,83 @@ export const latestSleeps = query({
       .withIndex("by_user_start", (q) => q.eq("whoopUserId", args.whoopUserId))
       .order("desc")
       .take(limit);
+  },
+});
+
+export const publicDashboard = query({
+  args: {
+    whoopUserId: v.number(),
+    rangeDays: v.number(),
+    start: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const rangeDays = Math.min(Math.max(args.rangeDays, 1), 14);
+    const limit = 25;
+
+    const user = await ctx.db
+      .query("whoopUsers")
+      .withIndex("by_whoop_user_id", (q) =>
+        q.eq("whoopUserId", args.whoopUserId),
+      )
+      .unique();
+
+    const body = await ctx.db
+      .query("bodyMeasurements")
+      .withIndex("by_user", (q) =>
+        q.eq("whoopUserId", args.whoopUserId),
+      )
+      .unique();
+
+    const [latestFetches, cycles, recoveries, sleeps, workouts] =
+      await Promise.all([
+        ctx.db
+          .query("dashboardFetches")
+          .withIndex("by_user_fetched_at", (q) =>
+            q.eq("whoopUserId", args.whoopUserId),
+          )
+          .order("desc")
+          .take(5),
+        ctx.db
+          .query("cycles")
+          .withIndex("by_user_start", (q) =>
+            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+          )
+          .order("desc")
+          .take(limit),
+        ctx.db
+          .query("recoveries")
+          .withIndex("by_user_created_at", (q) =>
+            q.eq("whoopUserId", args.whoopUserId).gte("createdAt", args.start),
+          )
+          .order("desc")
+          .take(limit),
+        ctx.db
+          .query("sleeps")
+          .withIndex("by_user_start", (q) =>
+            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+          )
+          .order("desc")
+          .take(limit),
+        ctx.db
+          .query("workouts")
+          .withIndex("by_user_start", (q) =>
+            q.eq("whoopUserId", args.whoopUserId).gte("start", args.start),
+          )
+          .order("desc")
+          .take(limit),
+      ]);
+
+    return {
+      rangeDays,
+      start: args.start,
+      user,
+      body,
+      latestFetch: latestFetches[0] ?? null,
+      latestFetches,
+      cycles,
+      recoveries,
+      sleeps,
+      workouts,
+    };
   },
 });
