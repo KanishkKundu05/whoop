@@ -73,6 +73,7 @@ GARMIN_CLIENT_SECRET=your-garmin-client-secret
 GARMIN_REDIRECT_URI=http://localhost:3000/api/auth/garmin/callback
 GARMIN_SESSION_SECRET=replace-with-at-least-32-random-characters
 NEXT_PUBLIC_CONVEX_URL=your-convex-deployment-url
+WHOOP_PUBLIC_USER_ID=optional-public-whoop-user-id
 ```
 
 Generate a session secret with:
@@ -110,6 +111,29 @@ values, and keeps backend functions synced while it runs. Once
 `NEXT_PUBLIC_CONVEX_URL` is present, dashboard loads call the
 `whoop:storeDashboardFetch` mutation after fetching WHOOP. If Convex is not
 configured, the dashboard still renders live WHOOP data and skips persistence.
+
+## Public Sleep Dashboard
+
+The public read-only dashboard is available at:
+
+```text
+/public
+```
+
+It does not call WHOOP directly and it does not require a visitor auth cookie.
+Instead, the owner signs in at `/`, the authenticated dashboard fetches WHOOP
+data and stores the latest records in Convex, and `/public` renders the stored
+sleep, recovery, cycle strain, and workout summaries for the configured user.
+
+To publish your own data:
+
+1. Connect WHOOP at `/` and wait for the dashboard to load once.
+2. Copy the `Public setup id` shown near the bottom of the private dashboard.
+3. Set `WHOOP_PUBLIC_USER_ID=your-whoop-user-id` locally and in production.
+4. Keep `NEXT_PUBLIC_CONVEX_URL` configured so the public route can read the
+   stored data.
+
+The public page intentionally omits email and body measurements.
 
 ## WHOOP Scopes
 
@@ -188,6 +212,7 @@ npx vercel env add GARMIN_CLIENT_ID production
 npx vercel env add GARMIN_CLIENT_SECRET production
 npx vercel env add GARMIN_SESSION_SECRET production
 npx vercel env add NEXT_PUBLIC_CONVEX_URL production
+npx vercel env add WHOOP_PUBLIC_USER_ID production
 ```
 
 3. Deploy:
@@ -231,6 +256,7 @@ derives the callback URL from the current request host instead.
 - `/api/auth/garmin` starts the Garmin OAuth PKCE flow.
 - `/api/auth/garmin/refresh` refreshes and rotates the Garmin token session.
 - `/api/auth/garmin/disconnect` revokes Garmin access and clears the local session.
+- `/public` renders the public read-only sleep and strain dashboard from Convex.
 - `/api/garmin/diagnostics` returns Garmin configuration and session diagnostics.
 - `/api/apple-watch/manifest` returns the planned Apple Watch/HealthKit bridge capabilities.
 - `/api/whoop/export?range=30` returns the same dashboard data as JSON for the current browser session.
