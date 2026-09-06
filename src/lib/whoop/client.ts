@@ -186,6 +186,10 @@ export async function getWhoopProfile(accessToken: string) {
   return fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic");
 }
 
+export async function getWhoopSleep(accessToken: string, sleepId: string) {
+  return fetchWhoop<Sleep>(accessToken, `/v2/activity/sleep/${sleepId}`);
+}
+
 export async function revokeWhoopAccess(accessToken: string) {
   await fetchWhoop<null>(accessToken, "/v2/user/access", undefined, {
     method: "DELETE",
