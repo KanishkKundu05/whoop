@@ -14,6 +14,7 @@ import {
   Compass,
   Download,
   Dumbbell,
+  Eye,
   FileText,
   Gauge,
   HeartPulse,
@@ -1385,6 +1386,13 @@ function Dashboard({
             <Download size={16} />
             JSON
           </a>
+          <Link
+            href="/public"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"
+          >
+            <Eye size={16} />
+            Public
+          </Link>
         </div>
       </section>
 
@@ -1539,9 +1547,17 @@ function Dashboard({
       </section>
 
       <section className="flex flex-wrap items-center justify-between gap-3 border border-zinc-200 bg-white p-4">
-        <p className="text-sm text-zinc-600">
-          Connected scopes: <span className="font-mono text-xs">{data.profile.data ? getScopeParam() : "WHOOP session"}</span>
-        </p>
+        <div className="space-y-1 text-sm text-zinc-600">
+          <p>
+            Connected scopes: <span className="font-mono text-xs">{data.profile.data ? getScopeParam() : "WHOOP session"}</span>
+          </p>
+          <p>
+            Public setup id:{" "}
+            <span className="font-mono text-xs">
+              {profile?.user_id ?? "sync profile first"}
+            </span>
+          </p>
+        </div>
         <form action="/api/auth/disconnect" method="post">
           <button className="inline-flex h-10 items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-700 hover:border-rose-600">
             <ShieldOff size={16} />
