@@ -155,6 +155,27 @@ export const dashboardFetchFields = {
   }),
 };
 
+export const dailySmsSubscriptionFields = {
+  whoopUserId: v.number(),
+  encryptedAccessToken: v.string(),
+  encryptedRefreshToken: v.string(),
+  expiresAt: v.number(),
+  scope: v.string(),
+  tokenType: v.string(),
+  connectedAt: v.number(),
+  encryptedRecipientPhone: v.string(),
+  recipientPhoneLast4: v.string(),
+  active: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  lastSentAt: v.optional(v.string()),
+  lastSentSleepId: v.optional(v.string()),
+  lastSentMessageSid: v.optional(v.string()),
+  lastProviderStatus: v.optional(v.string()),
+  lastError: v.optional(v.string()),
+  lastErrorAt: v.optional(v.string()),
+};
+
 export const whoopUserValidator = v.object(whoopUserFields);
 export const bodyMeasurementValidator = v.object(bodyMeasurementFields);
 export const cycleValidator = v.object(cycleFields);
@@ -162,6 +183,7 @@ export const recoveryValidator = v.object(recoveryFields);
 export const sleepValidator = v.object(sleepFields);
 export const workoutValidator = v.object(workoutFields);
 export const dashboardFetchValidator = v.object(dashboardFetchFields);
+export const dailySmsSubscriptionValidator = v.object(dailySmsSubscriptionFields);
 
 export type WhoopUserInput = Infer<typeof whoopUserValidator>;
 export type BodyMeasurementInput = Infer<typeof bodyMeasurementValidator>;
@@ -170,3 +192,6 @@ export type RecoveryInput = Infer<typeof recoveryValidator>;
 export type SleepInput = Infer<typeof sleepValidator>;
 export type WorkoutInput = Infer<typeof workoutValidator>;
 export type DashboardFetchInput = Infer<typeof dashboardFetchValidator>;
+export type DailySmsSubscriptionInput = Infer<
+  typeof dailySmsSubscriptionValidator
+>;

@@ -7,6 +7,7 @@ import {
   sleepFields,
   whoopUserFields,
   workoutFields,
+  dailySmsSubscriptionFields,
 } from "./whoopValidators";
 
 export default defineSchema({
@@ -42,4 +43,8 @@ export default defineSchema({
     .index("by_user_workout", ["whoopUserId", "workoutId"])
     .index("by_user_start", ["whoopUserId", "start"])
     .index("by_user_score_state", ["whoopUserId", "scoreState"]),
+
+  dailySmsSubscriptions: defineTable(dailySmsSubscriptionFields)
+    .index("by_user", ["whoopUserId"])
+    .index("by_active", ["active"]),
 })
