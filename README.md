@@ -138,6 +138,10 @@ The public page intentionally omits email and body measurements.
 
 ## Wake-Triggered Linq Message
 
+See the [personal WHOOP + Linq setup guide and logic review](docs/whoop-linq-personal-setup.md)
+for current configuration steps, webhook/OAuth details, a controlled delivery test,
+and known reliability issues to fix before unattended use.
+
 The app can send a message to a configured recipient when WHOOP reports that
 your main sleep was updated and scored:
 
@@ -160,8 +164,7 @@ DAILY_MESSAGE_SECRET=replace-with-at-least-32-random-characters
 LINQ_API_KEY=your-linq-api-key
 LINQ_PREFERRED_SERVICE=optional-iMessage-RCS-or-SMS
 DAILY_MESSAGE_GREETING=Good morning Mom
-WHOOP_WEBHOOK_SECRET=optional-whoop-webhook-secret-if-different-from-client-secret
-CRON_SECRET=optional-reconciliation-cron-secret
+CRON_SECRET=required-for-reconciliation-cron
 ```
 
 2. Connect WHOOP, then open `/daily-message`.
@@ -176,6 +179,8 @@ The setup stores the WHOOP access token, WHOOP refresh token, and recipient
 phone number encrypted in Convex. The webhook route validates
 `X-WHOOP-Signature` and `X-WHOOP-Signature-Timestamp`. If
 `WHOOP_WEBHOOK_SECRET` is unset, it falls back to `WHOOP_CLIENT_SECRET`.
+Leave the override entirely unset: WHOOP signs with the client secret, and an
+empty override prevents the current code from using that fallback.
 The reconciliation cron route requires
 `Authorization: Bearer $CRON_SECRET`, which Vercel sends automatically for
 cron invocations when `CRON_SECRET` is configured.
