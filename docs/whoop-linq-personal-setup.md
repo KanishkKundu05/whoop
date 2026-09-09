@@ -2,6 +2,10 @@
 
 Reviewed on 7 September 2026 against this repository and the official API documentation. This guide documents the existing implementation and required fixes; it does not deploy changes or send a message.
 
+Update, 9 September: a [connection test dashboard](whoop-connection-dashboard.md)
+is available at `/setup`. The empty webhook-secret fallback issue below has been
+fixed. Other daily-message findings remain applicable.
+
 ## What you can expect
 
 Use your own WHOOP account, one recipient, the existing Next.js app, Convex for persistent credentials, and Linq for sending. Your mother does not need a WHOOP account or to authorize your app.
@@ -71,7 +75,7 @@ openssl rand -hex 32
 
 Preserve existing session/encryption secrets if already in use. Changing `DAILY_MESSAGE_SECRET` without re-encrypting existing records makes their tokens and recipient numbers unreadable. Secrets belong on the server; do not prefix them with `NEXT_PUBLIC_`.
 
-**Delete `WHOOP_WEBHOOK_SECRET` entirely from the environment unless it is exactly the WHOOP client secret.** WHOOP signs with the client secret. This app permits an override, but does not need a separate generated webhook secret. Its `??` fallback does not handle an empty string: the blank `WHOOP_WEBHOOK_SECRET=` line in `.env.example` will break validation if copied unchanged. [Webhook security](https://developer.whoop.com/docs/developing/webhooks/#webhooks-security)
+**Leave `WHOOP_WEBHOOK_SECRET` unset unless it is exactly the WHOOP client secret.** WHOOP signs with the client secret. This app permits an override, but does not need a separate generated webhook secret. As of 9 September, blank overrides correctly fall back to the client secret. [Webhook security](https://developer.whoop.com/docs/developing/webhooks/#webhooks-security)
 
 Do not overwrite an existing `.env.local` by copying the template. For local work, use the localhost redirect and the corresponding registered URL.
 
@@ -183,7 +187,7 @@ For this first version, keep recovery/HRV out of the report. Adding them later r
 
 ### Reconciliation schedule
 
-`vercel.json` currently uses `0 15 * * *`: **15:00 UTC / 8:30 PM IST**, once daily. `CRON_SECRET` is required for this route even though the older README calls it optional. The setup screen's **Ready** check does not check it, webhook reachability, or Linq delivery.
+The original `vercel.json` used `0 15 * * *`: **15:00 UTC / 8:30 PM IST**, once daily. The 9 September setup deployment removes that schedule until daily messaging is ready. `CRON_SECRET` is required for this route even though the older README called it optional. The daily-message setup screen's **Ready** check does not check it, webhook reachability, or Linq delivery.
 
 For a daily morning fallback, a proposed schedule is `30 4 * * *` (10:00 AM IST). For quicker recovery, use a scheduler supporting authenticated calls every 10–15 minutes, after fixing freshness and refresh races. Vercel Hobby supports only once-daily jobs with imprecise timing; frequent cron requires an appropriate plan or another scheduler. No schedule was changed in this review. [Vercel cron limits](https://vercel.com/docs/cron-jobs/usage-and-pricing)
 

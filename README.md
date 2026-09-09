@@ -138,6 +138,11 @@ The public page intentionally omits email and body measurements.
 
 ## Wake-Triggered Linq Message
 
+Start with **[Connection setup](/setup)** in the app before enabling messages.
+The dashboard walks through WHOOP consent, a read-only profile/sleep API test,
+and receipt of a real signed `sleep.updated` webhook. See
+[dashboard setup instructions](docs/whoop-connection-dashboard.md).
+
 See the [personal WHOOP + Linq setup guide and logic review](docs/whoop-linq-personal-setup.md)
 for current configuration steps, webhook/OAuth details, a controlled delivery test,
 and known reliability issues to fix before unattended use.
@@ -152,8 +157,8 @@ Good morning Mom - I woke up at 7:12 AM, slept 7h 34m, and went to sleep at 11:1
 It uses the WHOOP `sleep.updated` webhook as the primary trigger, fetches that
 sleep from the WHOOP API, waits for a scored non-nap sleep, and sends through
 Linq over iMessage/RCS/SMS. The sleep `end` timestamp is used as the wake-up
-time. The Vercel Cron Job at `/api/messages/daily/cron` is only a reconciliation
-fallback for missed webhooks; sends are de-duplicated by WHOOP sleep id.
+time. The `/api/messages/daily/cron` route is a future reconciliation fallback
+for missed webhooks. Its schedule is disabled during connection testing.
 
 Setup:
 
@@ -179,8 +184,8 @@ The setup stores the WHOOP access token, WHOOP refresh token, and recipient
 phone number encrypted in Convex. The webhook route validates
 `X-WHOOP-Signature` and `X-WHOOP-Signature-Timestamp`. If
 `WHOOP_WEBHOOK_SECRET` is unset, it falls back to `WHOOP_CLIENT_SECRET`.
-Leave the override entirely unset: WHOOP signs with the client secret, and an
-empty override prevents the current code from using that fallback.
+Leave the override unset: WHOOP signs with the client secret. Empty overrides
+also fall back to the client secret.
 The reconciliation cron route requires
 `Authorization: Bearer $CRON_SECRET`, which Vercel sends automatically for
 cron invocations when `CRON_SECRET` is configured.

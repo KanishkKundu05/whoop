@@ -1,4 +1,5 @@
 import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
 import {
   bodyMeasurementFields,
   cycleFields,
@@ -11,6 +12,15 @@ import {
 } from "./whoopValidators";
 
 export default defineSchema({
+  whoopSetupTests: defineTable({
+    whoopUserId: v.number(),
+    startedAt: v.number(),
+    expiresAt: v.number(),
+    receivedAt: v.optional(v.number()),
+    eventType: v.optional(v.string()),
+    sleepId: v.optional(v.string()),
+    traceId: v.optional(v.string()),
+  }).index("by_user", ["whoopUserId"]),
   whoopUsers: defineTable(whoopUserFields).index("by_whoop_user_id", [
     "whoopUserId",
   ]),

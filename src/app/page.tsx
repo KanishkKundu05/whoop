@@ -349,6 +349,9 @@ function Shell({
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/setup" className="inline-flex h-10 items-center rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-700">
+              Connection setup
+            </Link>
             <Link
               href="/privacy"
               className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 text-sm font-medium text-zinc-800 hover:border-zinc-950"

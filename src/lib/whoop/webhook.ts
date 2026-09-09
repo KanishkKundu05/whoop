@@ -17,7 +17,7 @@ export type WhoopWebhookEvent = {
 };
 
 function getWebhookSecret() {
-  return process.env.WHOOP_WEBHOOK_SECRET ?? process.env.WHOOP_CLIENT_SECRET;
+  return process.env.WHOOP_WEBHOOK_SECRET?.trim() || process.env.WHOOP_CLIENT_SECRET;
 }
 
 function safeCompare(left: string, right: string) {

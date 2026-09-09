@@ -9,6 +9,7 @@
  */
 
 import type * as whoop from "../whoop.js";
+import type * as whoopSetup from "../whoopSetup.js";
 import type * as whoopValidators from "../whoopValidators.js";
 
 import type {
@@ -19,6 +20,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   whoop: typeof whoop;
+  whoopSetup: typeof whoopSetup;
   whoopValidators: typeof whoopValidators;
 }>;
 
