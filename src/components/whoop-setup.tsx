@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowUpRight, Check, Copy, LoaderCircle, Radio, ShieldCheck } from "lucide-react";
+import { DailyMessageSetup } from "@/components/daily-message-setup";
 import type { WebhookTest } from "@/lib/whoop/setup";
 
 type Status = {
@@ -115,7 +116,7 @@ export function WhoopSetup({ authError }: { authError?: string }) {
       <div className="mb-8 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div><p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-lime-800">Connect · Check · Listen</p>
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Let’s connect your WHOOP.</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">Three checks to make sure your account and sleep updates reach this app. Daily messaging comes next.</p>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-zinc-500">Verify your WHOOP connection, then configure Linq, review the message format, and choose who receives your sleep report.</p>
         </div>
         <span className="whitespace-nowrap rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm">{progress} of 3 checks passed</span>
       </div>
@@ -173,14 +174,43 @@ export function WhoopSetup({ authError }: { authError?: string }) {
               {status.webhook && !waiting && !passed && <p className="text-amber-800">Test timed out. Check the v2 URL, HTTPS access, and hosting logs, then start a new test.</p>}
             </div>
           </Step>
+          <div id="messaging" className="scroll-mt-6 pt-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-800">Next steps · Daily messaging</p>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">Continue below after checking your WHOOP connection.</p>
+          </div>
+          <Step number="04" title="Set up Linq delivery" done={false}>
+            <ol className="list-decimal space-y-3 pl-5 text-sm leading-6 text-zinc-600">
+              <li>Open your Linq account, configure a sending line, and confirm it supports your recipient’s country and messaging service.</li>
+              <li>Add your API token as <code>LINQ_API_KEY</code> in the app’s server environment.</li>
+              <li>Set <code>DAILY_MESSAGE_SECRET</code> to a random secret of at least 32 characters and configure <code>NEXT_PUBLIC_CONVEX_URL</code> for saved recipients. Keep an existing encryption secret unchanged.</li>
+              <li>Restart or redeploy the app, then refresh messaging status below. Configuration status checks variable presence; confirm delivery on the recipient’s phone.</li>
+            </ol>
+            <p className="mt-4 text-sm leading-6 text-zinc-500">The existing sender uses a Linq sending line. Optional <code>LINQ_PREFERRED_SERVICE</code> values are <code>iMessage</code>, <code>RCS</code>, or <code>SMS</code>.</p>
+          </Step>
+          <Step number="05" title="Review message template formatting" done={false}>
+            <p className="text-sm leading-6 text-zinc-600">The current report is a plain-text message. Sleep times use the timezone offset from WHOOP, and duration is formatted as hours and minutes.</p>
+            <pre className="mt-4 whitespace-pre-wrap break-words rounded-xl border border-zinc-200 bg-zinc-50 p-4 font-mono text-xs leading-6">{"{greeting} - I woke up at {wakeTime}, slept {sleepDuration}, and went to sleep at {sleepStart} last night."}</pre>
+            <p className="mt-4 text-xs font-semibold uppercase tracking-wider text-zinc-500">Example · illustrative values</p>
+            <p className="mt-2 rounded-2xl bg-lime-100 p-4 text-sm leading-6 text-lime-950">Good morning Mom - I woke up at 7:12 AM, slept 7h 34m, and went to sleep at 11:14 PM last night.</p>
+            <p className="mt-4 text-sm leading-6 text-zinc-600">Customize the greeting with the server variable <code>DAILY_MESSAGE_GREETING</code>, then restart or redeploy. It defaults to “Good morning Mom”. The remaining fields are filled from your sleep record; sleep-quality scores are not included in the current format.</p>
+          </Step>
+          <Step number="06" title="Choose your recipient" done={false}>
+            <DailyMessageSetup compact />
+          </Step>
+          <Step number="07" title="Enable the daily sleep trigger" done={false}>
+            <p className="text-sm leading-6 text-zinc-600">After finishing the listener test and saving your recipient, replace the test webhook in WHOOP developer settings with this delivery URL, using model <strong>v2</strong>.</p>
+            <CopyValue label="Daily-message webhook URL" value={`${new URL(status.webhookUrl).origin}/api/whoop/webhook`} />
+            <p className="mt-4 text-sm leading-6 text-zinc-600">Messages are triggered by scored main-sleep updates, rather than a fixed send time. Start with your own number and confirm the next report arrives before changing recipients. Use “Turn off” above to stop automatic messages.</p>
+          </Step>
         </div>
         <aside className="rounded-2xl bg-zinc-950 p-6 text-white lg:sticky lg:top-6">
           <ShieldCheck className="text-lime-300" size={26} />
           <h2 className="mt-5 text-lg font-semibold">{complete ? "Connection verified." : "One account. Three checks."}</h2>
-          <p className="mt-3 text-sm leading-6 text-zinc-400">{complete ? "WHOOP authorization, API access, and a signed sleep update have all passed. You’re ready for the daily-message step later." : "Your tokens stay on the server. This listener records only event IDs and timestamps and never sends a text."}</p>
+          <p className="mt-3 text-sm leading-6 text-zinc-400">{complete ? "WHOOP authorization, API access, and a signed sleep update have all passed. Continue with Linq and recipient setup below." : "Your tokens stay on the server. This listener records only event IDs and timestamps and never sends a text."}</p>
           <div className="my-6 border-t border-zinc-800" />
-          <p className="text-xs uppercase tracking-widest text-zinc-500">Next, later</p>
-          <p className="mt-2 text-sm text-zinc-300">Linq delivery · Sleep report · Daily schedule</p>
+          <p className="text-xs uppercase tracking-widest text-zinc-500">Next steps</p>
+          <p className="mt-2 text-sm text-zinc-300">Linq delivery · Message format · Recipient</p>
+          <a href="#messaging" className="mt-4 block text-sm text-lime-300 underline underline-offset-4">Set up daily messages ↓</a>
           <button className="mt-6 text-sm text-lime-300 underline underline-offset-4" onClick={() => { setError(null); refresh().catch(error => setError(error.message)); }}>Refresh status</button>
           <a className="mt-4 block text-xs text-zinc-400 underline" href="https://developer.whoop.com/docs/developing/webhooks/#webhooks-testing" target="_blank" rel="noreferrer">WHOOP webhook testing guide</a>
         </aside>
