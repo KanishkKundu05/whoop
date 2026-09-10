@@ -76,7 +76,19 @@ export async function GET() {
     return errorResponse("WHOOP user id is not available yet.", 409);
   }
 
-  const status = await getDailySmsSubscriptionStatus(whoopUserId);
+  let status;
+  try {
+    status = config.missing.includes("NEXT_PUBLIC_CONVEX_URL")
+      ? null
+      : await getDailySmsSubscriptionStatus(whoopUserId);
+  } catch {
+    const response = NextResponse.json({
+      ok: false, connected: true, config,
+      error: "Could not load saved messaging settings. Check Convex configuration and refresh status.",
+    }, { status: 503 });
+    if (refreshed) setWhoopSessionCookie(response, session);
+    return response;
+  }
   const response = NextResponse.json({
     ok: true,
     connected: true,
@@ -137,7 +149,12 @@ export async function POST(request: NextRequest) {
     return errorResponse("recipientPhone is required.");
   }
 
-  const normalizedPhone = normalizeE164Phone(recipientPhone);
+  let normalizedPhone: string;
+  try {
+    normalizedPhone = normalizeE164Phone(recipientPhone);
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "Invalid phone number.");
+  }
   const profile = session.userId
     ? null
     : await getWhoopProfile(session.accessToken).catch(() => null);

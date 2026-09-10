@@ -31,7 +31,7 @@ function formatDateTime(value?: string | number) {
   }).format(new Date(value));
 }
 
-export function DailyMessageSetup() {
+export function DailyMessageSetup({ compact = false }: { compact?: boolean }) {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [recipientPhone, setRecipientPhone] = useState("");
   const [pending, setPending] = useState(false);
@@ -125,39 +125,51 @@ export function DailyMessageSetup() {
 
   const subscription = status?.subscription;
   const missing = status?.config?.missing ?? [];
+  const canSave = !!status?.ok && !!status.connected && !!status.config?.isReady;
 
   return (
-    <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="border border-zinc-200 bg-white p-6">
+    <section className={`grid gap-5 ${compact ? "" : "lg:grid-cols-[minmax(0,1fr)_380px]"}`}>
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6">
         <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-zinc-950 text-lime-300">
           <Bell size={22} />
         </div>
         <h2 className="mt-6 text-2xl font-semibold tracking-normal">
           Daily WHOOP text
         </h2>
+        <p className="mt-3 text-sm leading-6 text-zinc-600">Choose who receives your sleep report. Saving enables automatic messages when WHOOP sends a scored main-sleep update; it does not send a test text.</p>
+        {status?.error && <p role="alert" className="mt-4 text-sm text-rose-700">{status.error}</p>}
+        {status?.connected === false && <p className="mt-4 text-sm text-amber-800">Connect WHOOP before saving a recipient.</p>}
+        {missing.length > 0 && <p className="mt-4 break-words text-sm text-amber-800">Set these server variables and restart the app: {missing.join(", ")}.</p>}
+        <button type="button" className="mt-4 text-sm underline underline-offset-4" disabled={pending} onClick={() => loadStatus().catch(() => setMessage("Could not refresh status. Try again."))}>Refresh messaging status</button>
         <form className="mt-7 grid gap-4" onSubmit={saveRecipient}>
           <label className="grid gap-2 text-sm font-medium text-zinc-800">
-            Mom&apos;s phone number
+            Recipient phone number
             <input
               className="h-11 border border-zinc-300 bg-white px-3 text-base font-normal text-zinc-950 outline-none focus:border-zinc-950"
-              disabled={pending || missing.length > 0}
+              disabled={pending}
+              type="tel"
+              name="recipientPhone"
+              autoComplete="tel"
+              required
+              aria-describedby="recipient-phone-help"
               inputMode="tel"
               onChange={(event) => setRecipientPhone(event.target.value)}
               placeholder="+14155552671"
               value={recipientPhone}
             />
           </label>
+          <p id="recipient-phone-help" className="text-xs leading-5 text-zinc-500">Include + and the country code, for example +14155552671. Spaces, dashes, and parentheses are accepted.</p>
           <div className="flex flex-wrap items-center gap-3">
             <button
               className="inline-flex h-11 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white hover:bg-zinc-800 disabled:bg-zinc-300 disabled:text-zinc-500"
-              disabled={pending || missing.length > 0}
+              disabled={pending || !canSave || !recipientPhone.trim()}
             >
               {pending ? <LoaderCircle className="animate-spin" size={17} /> : <Save size={17} />}
-              Save
+              Save & enable messages
             </button>
             <button
               className="inline-flex h-11 items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-semibold text-zinc-800 hover:border-zinc-950 disabled:border-zinc-200 disabled:text-zinc-400"
-              disabled={pending || !subscription}
+              disabled={pending || !subscription?.active}
               onClick={disableDailyMessage}
               type="button"
             >
@@ -167,19 +179,19 @@ export function DailyMessageSetup() {
           </div>
         </form>
         {message ? (
-          <div className="mt-5 border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">
+          <div role="status" className="mt-5 border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-800">
             {message}
           </div>
         ) : null}
       </div>
 
-      <div className="border border-zinc-200 bg-white p-6">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-6">
         <h3 className="text-sm font-semibold text-zinc-950">Status</h3>
         <dl className="mt-5 grid gap-4 text-sm">
           <div>
             <dt className="text-zinc-500">Configuration</dt>
             <dd className="mt-1 font-medium text-zinc-950">
-              {status ? (missing.length === 0 ? "Ready" : missing.join(", ")) : "Loading"}
+              {status ? (status.config?.isReady ? "Configured" : missing.length ? missing.join(", ") : "Unavailable") : "Loading"}
             </dd>
           </div>
           <div>
