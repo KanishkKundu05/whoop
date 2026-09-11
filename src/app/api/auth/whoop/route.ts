@@ -1,15 +1,9 @@
+import { safeNextPath } from "@/lib/auth/navigation";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfigStatus } from "@/lib/whoop/config";
 import { buildAuthorizationUrl, createOAuthState } from "@/lib/whoop/oauth";
 import { setOAuthNextCookie, setOAuthStateCookie } from "@/lib/whoop/session";
 
-function safeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/";
-  }
-
-  return value;
-}
 
 function redirectWithError(request: NextRequest, nextPath: string, error: string) {
   const url = new URL(nextPath, request.url);

@@ -1,3 +1,4 @@
+import { safeNextPath } from "@/lib/auth/navigation";
 import { NextRequest, NextResponse } from "next/server";
 import { getWhoopProfile } from "@/lib/whoop/client";
 import {
@@ -11,13 +12,6 @@ import {
   WHOOP_OAUTH_STATE_COOKIE,
 } from "@/lib/whoop/session";
 
-function safeNextPath(value: string | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/";
-  }
-
-  return value;
-}
 
 function redirectWithError(request: NextRequest, nextPath: string, error: string) {
   const url = new URL(nextPath, request.url);

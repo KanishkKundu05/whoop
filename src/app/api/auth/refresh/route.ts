@@ -1,3 +1,4 @@
+import { safeNextPath } from "@/lib/auth/navigation";
 import { NextRequest, NextResponse } from "next/server";
 import {
   refreshWhoopTokens,
@@ -9,13 +10,6 @@ import {
   setWhoopSessionCookie,
 } from "@/lib/whoop/session";
 
-function safeNextPath(value: string | null) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/";
-  }
-
-  return value;
-}
 
 export async function GET(request: NextRequest) {
   const session = await getWhoopSession();
@@ -23,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   if (!session?.refreshToken) {
     const response = NextResponse.redirect(
-      new URL("/?auth_error=session_expired", request.url),
+      new URL("/whoop?auth_error=session_expired", request.url),
     );
     clearWhoopCookies(response);
     return response;
@@ -38,7 +32,7 @@ export async function GET(request: NextRequest) {
     return response;
   } catch {
     const response = NextResponse.redirect(
-      new URL("/?auth_error=refresh_failed", request.url),
+      new URL("/whoop?auth_error=refresh_failed", request.url),
     );
     clearWhoopCookies(response);
     return response;
