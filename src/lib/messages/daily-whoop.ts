@@ -1,4 +1,5 @@
 import "server-only";
+import { DEFAULT_DAILY_GREETING, formatDailyMessage } from "@/lib/messages/template";
 
 import type { Sleep } from "@/lib/whoop/types";
 
@@ -10,15 +11,7 @@ export type DailySleepDigest = {
   message: string;
 };
 
-export function normalizeE164Phone(value: string) {
-  const normalized = value.trim().replace(/[()\s.-]/g, "");
-
-  if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
-    throw new Error("Phone number must be in E.164 format, like +14155552671.");
-  }
-
-  return normalized;
-}
+export { normalizeE164Phone } from "@/lib/messages/template";
 
 export function phoneLast4(value: string) {
   return value.slice(-4);
@@ -86,13 +79,13 @@ export function buildDailySleepDigest(sleep: Sleep): DailySleepDigest {
   const sleepStart = formatLocalTime(sleep.start, sleep.timezone_offset);
   const wakeTime = formatLocalTime(sleep.end, sleep.timezone_offset);
   const sleepDuration = formatDuration(sleepDurationMilliseconds(sleep));
-  const greeting = process.env.DAILY_MESSAGE_GREETING?.trim() || "Good morning Mom";
+  const greeting = process.env.DAILY_MESSAGE_GREETING?.trim() || DEFAULT_DAILY_GREETING;
 
   return {
     sleepId: sleep.id,
     sleepStart,
     wakeTime,
     sleepDuration,
-    message: `${greeting} - I woke up at ${wakeTime}, slept ${sleepDuration}, and went to sleep at ${sleepStart} last night.`,
+    message: formatDailyMessage({ greeting, wakeTime, sleepDuration, sleepStart }),
   };
 }

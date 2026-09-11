@@ -110,9 +110,12 @@ function convexOptions() {
 export function getDailySmsConfigStatus() {
   const missing: string[] = [];
 
-  if (!getConvexUrl()) missing.push("NEXT_PUBLIC_CONVEX_URL");
-  if (!process.env.DAILY_MESSAGE_SECRET) missing.push("DAILY_MESSAGE_SECRET");
-  if (!process.env.LINQ_API_KEY) missing.push("LINQ_API_KEY");
+  try {
+    const url = new URL(getConvexUrl() ?? "");
+    if (!["https:", "http:"].includes(url.protocol)) missing.push("NEXT_PUBLIC_CONVEX_URL");
+  } catch { missing.push("NEXT_PUBLIC_CONVEX_URL"); }
+  if (!process.env.DAILY_MESSAGE_SECRET || process.env.DAILY_MESSAGE_SECRET.length < 32) missing.push("DAILY_MESSAGE_SECRET");
+  if (!process.env.LINQ_API_KEY?.trim()) missing.push("LINQ_API_KEY");
 
   return {
     isReady: missing.length === 0,

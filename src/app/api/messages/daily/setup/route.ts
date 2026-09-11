@@ -1,218 +1,89 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getDailySmsConfigStatus,
-  getDailySmsSubscriptionStatus,
-  saveDailySmsSubscription,
-  setDailySmsSubscriptionEnabled,
+  getDailySmsConfigStatus, getDailySmsSubscriptionStatus,
+  saveDailySmsSubscription, setDailySmsSubscriptionEnabled,
 } from "@/lib/messages/daily-subscriptions";
 import { normalizeE164Phone, phoneLast4 } from "@/lib/messages/daily-whoop";
 import { getWhoopProfile } from "@/lib/whoop/client";
+import { refreshWhoopTokens, tokenResponseToSession } from "@/lib/whoop/oauth";
 import {
-  refreshWhoopTokens,
-  tokenResponseToSession,
-} from "@/lib/whoop/oauth";
-import {
-  clearWhoopCookies,
-  getWhoopSession,
-  isSessionExpiring,
-  setWhoopSessionCookie,
+  clearWhoopCookies, getWhoopSession, isSessionExpiring, setWhoopSessionCookie,
 } from "@/lib/whoop/session";
+import type { WhoopSession } from "@/lib/whoop/types";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+const json = (body: unknown, status = 200) => NextResponse.json(body, {
+  status, headers: { "Cache-Control": "no-store" },
+});
+const errorResponse = (error: string, status = 400) => json({ ok: false, error }, status);
 
-async function getFreshSession() {
+async function withSession(action: (session: WhoopSession) => Promise<NextResponse>) {
   let session = await getWhoopSession();
-
-  if (!session) {
-    return { session: null, refreshed: false };
+  if (!session) return json({ ok: false, connected: false, error: "Connect WHOOP to continue." }, 401);
+  let refreshed = false;
+  if (isSessionExpiring(session, 5 * 60_000)) {
+    try {
+      if (!session.refreshToken) throw new Error("Missing refresh token");
+      session = tokenResponseToSession(await refreshWhoopTokens(session.refreshToken), session);
+      refreshed = true;
+    } catch {
+      const response = json({ ok: false, connected: false, error: "Your WHOOP connection expired. Reconnect to continue." }, 401);
+      clearWhoopCookies(response);
+      return response;
+    }
   }
-
-  if (!isSessionExpiring(session, 5 * 60_000)) {
-    return { session, refreshed: false };
+  let response: NextResponse;
+  try {
+    if (!session.userId) {
+      const profile = await getWhoopProfile(session.accessToken);
+      session = { ...session, userId: profile.user_id };
+      refreshed = true;
+    }
+    response = await action(session);
+  } catch {
+    response = errorResponse("We couldn’t access your messaging settings. Please try again. If this continues, check the app’s storage configuration.", 503);
   }
-
-  if (!session.refreshToken) {
-    return { session: null, refreshed: false, expired: true };
-  }
-
-  const token = await refreshWhoopTokens(session.refreshToken);
-  session = tokenResponseToSession(token, session);
-
-  return { session, refreshed: true };
-}
-
-function errorResponse(message: string, status = 400) {
-  return NextResponse.json({ ok: false, error: message }, { status });
+  // A failed save must still persist rotated credentials so retry can succeed.
+  if (refreshed) setWhoopSessionCookie(response, session);
+  return response;
 }
 
 export async function GET() {
-  const config = getDailySmsConfigStatus();
-  const { session, refreshed, expired } = await getFreshSession();
-
-  if (expired) {
-    const response = errorResponse(
-      "WHOOP session expired. Reconnect your account.",
-      401,
-    );
-    clearWhoopCookies(response);
-    return response;
-  }
-
-  if (!session) {
-    return NextResponse.json(
-      {
-        ok: false,
-        connected: false,
-        config,
-      },
-      { status: 401 },
-    );
-  }
-
-  const whoopUserId = session.userId;
-
-  if (!whoopUserId) {
-    return errorResponse("WHOOP user id is not available yet.", 409);
-  }
-
-  let status;
-  try {
-    status = config.missing.includes("NEXT_PUBLIC_CONVEX_URL")
-      ? null
-      : await getDailySmsSubscriptionStatus(whoopUserId);
-  } catch {
-    const response = NextResponse.json({
-      ok: false, connected: true, config,
-      error: "Could not load saved messaging settings. Check Convex configuration and refresh status.",
-    }, { status: 503 });
-    if (refreshed) setWhoopSessionCookie(response, session);
-    return response;
-  }
-  const response = NextResponse.json({
-    ok: true,
-    connected: true,
-    config,
-    subscription: status,
+  return withSession(async (session) => {
+    const config = getDailySmsConfigStatus();
+    const subscription = config.missing.includes("NEXT_PUBLIC_CONVEX_URL")
+      ? null : await getDailySmsSubscriptionStatus(session.userId!);
+    return json({ ok: true, connected: true, hasOfflineAccess: !!session.refreshToken, config, subscription });
   });
-
-  if (refreshed) {
-    setWhoopSessionCookie(response, session);
-  }
-
-  return response;
 }
 
 export async function POST(request: NextRequest) {
-  const config = getDailySmsConfigStatus();
-
-  if (!config.isReady) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "Daily message configuration is incomplete.",
-        config,
-      },
-      { status: 500 },
-    );
-  }
-
-  const { session, refreshed, expired } = await getFreshSession();
-
-  if (expired) {
-    const response = errorResponse(
-      "WHOOP session expired. Reconnect your account.",
-      401,
-    );
-    clearWhoopCookies(response);
-    return response;
-  }
-
-  if (!session) {
-    return errorResponse("Connect WHOOP before setting up daily messages.", 401);
-  }
-
-  let body: unknown;
-
+  if (request.headers.get("origin") !== request.nextUrl.origin) return errorResponse("Save your recipient from this app.", 403);
+  let recipientPhone: string;
   try {
-    body = await request.json();
-  } catch {
-    return errorResponse("Expected a JSON request body.");
-  }
-
-  const recipientPhone =
-    body && typeof body === "object" && "recipientPhone" in body
-      ? body.recipientPhone
-      : undefined;
-
-  if (typeof recipientPhone !== "string") {
-    return errorResponse("recipientPhone is required.");
-  }
-
-  let normalizedPhone: string;
-  try {
-    normalizedPhone = normalizeE164Phone(recipientPhone);
+    const body = await request.json();
+    if (typeof body?.recipientPhone !== "string") return errorResponse("Enter a recipient phone number.");
+    recipientPhone = normalizeE164Phone(body.recipientPhone);
   } catch (error) {
-    return errorResponse(error instanceof Error ? error.message : "Invalid phone number.");
+    return errorResponse(error instanceof Error && !(error instanceof SyntaxError) ? error.message : "Enter a valid recipient phone number.");
   }
-  const profile = session.userId
-    ? null
-    : await getWhoopProfile(session.accessToken).catch(() => null);
-  const whoopUserId = profile?.user_id ?? session.userId;
-
-  if (!whoopUserId) {
-    return errorResponse("Could not identify the connected WHOOP user.", 409);
-  }
-
-  const updatedSession = {
-    ...session,
-    userId: whoopUserId,
-  };
-
-  await saveDailySmsSubscription({
-    session: updatedSession,
-    whoopUserId,
-    recipientPhone: normalizedPhone,
-    recipientPhoneLast4: phoneLast4(normalizedPhone),
+  return withSession(async (session) => {
+    const config = getDailySmsConfigStatus();
+    if (!config.isReady) return json({ ok: false, error: "Message delivery needs configuration before you can continue.", config }, 503);
+    if (!session.refreshToken) return errorResponse("Reconnect WHOOP and allow offline access to enable automatic messages.", 409);
+    await saveDailySmsSubscription({
+      session, whoopUserId: session.userId!, recipientPhone,
+      recipientPhoneLast4: phoneLast4(recipientPhone),
+    });
+    return json({ ok: true, subscription: { active: true, recipientPhoneLast4: phoneLast4(recipientPhone) } });
   });
-
-  const response = NextResponse.json({
-    ok: true,
-    subscription: {
-      active: true,
-      recipientPhoneLast4: phoneLast4(normalizedPhone),
-    },
-  });
-
-  if (refreshed || profile) {
-    setWhoopSessionCookie(response, updatedSession);
-  }
-
-  return response;
 }
 
-export async function DELETE() {
-  const { session, refreshed, expired } = await getFreshSession();
-
-  if (expired) {
-    const response = errorResponse(
-      "WHOOP session expired. Reconnect your account.",
-      401,
-    );
-    clearWhoopCookies(response);
-    return response;
-  }
-
-  if (!session?.userId) {
-    return errorResponse("No connected WHOOP user is available.", 401);
-  }
-
-  const disabled = await setDailySmsSubscriptionEnabled(session.userId, false);
-  const response = NextResponse.json({ ok: true, disabled });
-
-  if (refreshed) {
-    setWhoopSessionCookie(response, session);
-  }
-
-  return response;
+export async function DELETE(request: NextRequest) {
+  if (request.headers.get("origin") !== request.nextUrl.origin) return errorResponse("Manage your messages from this app.", 403);
+  return withSession(async (session) => {
+    const disabled = await setDailySmsSubscriptionEnabled(session.userId!, false);
+    return json({ ok: true, disabled });
+  });
 }
