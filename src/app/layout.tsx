@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "WHOOP + Garmin Dashboard",
-  description: "A private dashboard for WHOOP data with Garmin API linking.",
+  title: "Pace | Your daily rhythm",
+  description: "Connect your wearable for music that moves with you and morning sleep reports.",
 };
 
 export default function RootLayout({
