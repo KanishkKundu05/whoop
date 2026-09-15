@@ -48,6 +48,8 @@ Track and resolve the findings in the [existing delivery review](docs/whoop-linq
 
 ## Product follow-ups
 
+- [x] Reskin WHOOP configuration with Funnel Display headings and a guided connect → verify data → test sleep updates flow, followed by a handoff to morning-text setup.
+
 - [ ] Turn the proposed sleep widget specs into working widgets with clear data requirements.
 - [ ] Expand the DJ track catalog and validate recommendations against the age and source of the heart-rate signal.
 - [ ] Add integration coverage for new providers, missing data, revoked access, and sync failures.
