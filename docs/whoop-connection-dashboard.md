@@ -7,8 +7,9 @@ Open `/setup` (or click **Connection setup** on the main dashboard).
    and the exact OAuth callback URL to register in WHOOP.
 2. Click **Connect WHOOP** and authorize your own account. You return to `/setup`.
 3. Click **Run API test**. This makes two read-only WHOOP v2 calls: profile and up
-   to five recent sleeps. No records is a successful API call with an empty
-   history; an API error is a failed test. Tokens are never returned to the UI.
+   to five recent sleeps. An empty sleep list leaves sleep data unverified and
+   shows account and request diagnostics; a malformed response or API error
+   fails the request. Tokens are never returned to the UI.
 4. Configure `NEXT_PUBLIC_CONVEX_URL` and generate `WHOOP_SETUP_SECRET` with
    `openssl rand -hex 32`. Set the same secret in Next.js and the corresponding
    Convex deployment's Settings → Environment Variables. Every new test-storage

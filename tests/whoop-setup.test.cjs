@@ -70,11 +70,11 @@ test('storage failures return retryable HTTP status', async () => {
 });
 
 class WhoopApiError extends Error { constructor(status) { super('provider failure'); this.status = status; } }
-function apiRoute({ session = { accessToken: 'hidden', userId: 7 }, fail, sleeps = [] } = {}) {
+function apiRoute({ session = { accessToken: 'hidden', userId: 7, scope: 'read:profile read:sleep' }, fail, sleeps = [], payload = { records: sleeps } } = {}) {
   return load('src/app/api/whoop/setup/route.ts', {
     '@/lib/whoop/config': { getConfigStatus: () => ({ isReady: true }) },
     '@/lib/whoop/session': { getWhoopSession: async () => session, isSessionExpiring: s => !!s.expired, setWhoopSessionCookie: () => {} },
-    '@/lib/whoop/client': { WhoopApiError, getWhoopProfile: async () => ({ user_id: 7, first_name: 'Test' }), fetchWhoop: async () => { if (fail) throw new WhoopApiError(fail); return { records: sleeps }; } },
+    '@/lib/whoop/client': { WhoopApiError, getWhoopProfile: async () => ({ user_id: 7, first_name: 'Test' }), fetchWhoop: async () => { if (fail) throw new WhoopApiError(fail); return payload; } },
     '@/lib/whoop/setup': { setupStorageMissing: () => [], readWebhookTest: async () => null, startWebhookTest: async () => ({}) },
   });
 }
@@ -91,13 +91,34 @@ test('provider API failure is not reported as a passing test', async () => {
   assert.equal(response.status, 403);
   assert.equal((await response.json()).providerStatus, 403);
 });
-test('empty sleep collection proves access, without inventing sleep results or leaking tokens', async () => {
+test('empty sleep collection does not verify sleep data or leak tokens', async () => {
   const response = await apiRoute().POST(apiRequest());
   const result = await response.json();
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'empty_sleep_collection');
   assert.equal(result.sleepCount, 0);
   assert.equal(result.latest, null);
   assert.ok(!JSON.stringify(result).includes('hidden'));
+});
+test('missing or malformed records are not reported as an empty collection', async () => {
+  for (const payload of [null, {}, { records: null }, { records: {} }]) {
+    const response = await apiRoute({ payload }).POST(apiRequest());
+    assert.equal(response.status, 502);
+    const result = await response.json();
+    assert.equal(result.reason, 'invalid_sleep_response');
+    assert.equal(result.sleepCount, undefined);
+  }
+});
+test('sleep records verify the check and identify the latest main sleep', async () => {
+  const response = await apiRoute({ sleeps: [
+    { id: 'nap', nap: true },
+    { id: 'main', nap: false, end: '2026-09-15T10:00:00Z', score_state: 'SCORED', score: { sleep_performance_percentage: 85 } },
+  ] }).POST(apiRequest());
+  const result = await response.json();
+  assert.equal(result.ok, true);
+  assert.equal(result.sleepCount, 2);
+  assert.equal(result.latest.id, 'main');
+  assert.equal(result.latest.performance, 85);
 });
 
 const setupFunctions = load('convex/whoopSetup.ts', {

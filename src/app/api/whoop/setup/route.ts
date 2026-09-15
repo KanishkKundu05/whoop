@@ -54,10 +54,28 @@ export async function POST(request: NextRequest) {
     const sleeps = await fetchWhoop<PaginatedWhoopResponse<Sleep>>(
       session.accessToken, "/v2/activity/sleep", { limit: 5 },
     );
-    const latest = sleeps.records?.find(sleep => !sleep.nap);
+    // A successful HTTP response alone does not prove that sleep data was read.
+    // Do not silently turn a missing or malformed records field into zero sleeps.
+    if (!sleeps || !Array.isArray(sleeps.records)) {
+      return json({
+        ok: false, reason: "invalid_sleep_response",
+        error: "WHOOP returned an unexpected sleep response (records is not an array). Sleep data could not be verified.",
+        userId: profile.user_id,
+        responseKeys: sleeps && typeof sleeps === "object" ? Object.keys(sleeps) : [],
+      }, 502);
+    }
+    const latest = sleeps.records.find(sleep => !sleep.nap);
+    const hasSleeps = sleeps.records.length > 0;
     const response = json({
-      ok: true, testedAt: Date.now(), userId: profile.user_id,
-      name: profile.first_name, sleepCount: sleeps.records?.length ?? 0,
+      ok: hasSleeps, reason: hasSleeps ? "sleep_records_found" : "empty_sleep_collection",
+      testedAt: Date.now(), userId: profile.user_id,
+      name: profile.first_name, sleepCount: sleeps.records.length,
+      diagnostics: {
+        endpoint: "/v2/activity/sleep", limit: 5,
+        dateFilter: "No start filter; WHOOP defaults end to now",
+        recordsIsArray: true, hasMorePages: Boolean(sleeps.next_token),
+        sessionScopes: session.scope.split(/\s+/).filter(Boolean),
+      },
       latest: latest ? {
         id: latest.id, end: latest.end, scoreState: latest.score_state,
         performance: latest.score?.sleep_performance_percentage,

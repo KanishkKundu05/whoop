@@ -15,6 +15,8 @@ type Status = {
 };
 type ApiResult = {
   ok: boolean; testedAt: number; userId: number; name: string; sleepCount: number;
+  reason: "sleep_records_found" | "empty_sleep_collection";
+  diagnostics: { endpoint: string; limit: number; dateFilter: string; recordsIsArray: boolean; hasMorePages: boolean; sessionScopes: string[] };
   latest: { id: string; end: string; scoreState: string; performance?: number; efficiency?: number } | null;
 };
 const button = styles.primary;
@@ -172,12 +174,19 @@ export function WhoopSetup({ authError }: { authError?: string }) {
           {step === 1 && <Step number="02" title="Let’s find your rhythm." done={apiPassed}>
             <p className="text-sm leading-6 text-zinc-600">Check that Pace can read your profile and recent sleep. This brings in up to five sleep records from your WHOOP account.</p>
             <button className={`${button} mt-5`} disabled={!connected || !!busy} onClick={() => run("api")}>{busy === "api" && <LoaderCircle size={16} className="animate-spin" />} {api ? "Run again" : "Run API test"}</button>
+            {api && !api.ok && <div role="status" className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+              <p className="font-semibold">Account connected, but sleep data is not verified.</p>
+              <p>WHOOP returned an empty sleep list for {api.name || "your account"} (user {api.userId}). Checked {new Date(api.testedAt).toLocaleTimeString()}.</p>
+              <p>This check has no start-date filter. If your phone shows sleep records, confirm you connected the same WHOOP account. Reconnect to check the account and grant sleep access, then run again.</p>
+              <a className="underline underline-offset-4" href="/api/auth/whoop?next=/setup/connection">Reconnect WHOOP</a>
+              <details className="mt-3"><summary className="cursor-pointer">Connection diagnostics</summary><pre className="mt-2 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(api.diagnostics, null, 2)}</pre></details>
+            </div>}
             {apiPassed && api && <div className="mt-5 rounded-xl bg-lime-50 p-4 text-sm leading-6">
               <p className="font-semibold">Profile and sleep API passed{api.name ? `, ${api.name}` : ""}.</p>
               <p>{api.sleepCount} sleep records returned. Checked {new Date(api.testedAt).toLocaleTimeString()}.</p>
               {api.latest ? <><p>Latest main sleep ended {new Date(api.latest.end).toLocaleString()}.</p><p>Score state: {api.latest.scoreState}</p>
                 {api.latest.performance != null && <p>Sleep performance: {Math.round(api.latest.performance)}%</p>}
-                {api.latest.efficiency != null && <p>Sleep efficiency: {Math.round(api.latest.efficiency)}%</p>}</> : <p>No main sleep returned. Access works; wear and sync WHOOP to create sleep data.</p>}
+                {api.latest.efficiency != null && <p>Sleep efficiency: {Math.round(api.latest.efficiency)}%</p>}</> : <p>The returned records are naps; no main sleep was included in these five records.</p>}
             </div>}
           </Step>}
           {step === 2 && <Step number="03" title="A little wake-up call." done={passed}>
