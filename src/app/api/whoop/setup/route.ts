@@ -1,3 +1,4 @@
+import { isWhoopAdmin } from "@/lib/whoop/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { getConfigStatus } from "@/lib/whoop/config";
 import { getWhoopSession, isSessionExpiring, setWhoopSessionCookie } from "@/lib/whoop/session";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
 
 export async function GET(request: NextRequest) {
+  if (!(await isWhoopAdmin())) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const config = getConfigStatus(request);
   let callbackMatchesOrigin = false;
   try { callbackMatchesOrigin = new URL(config.redirectUri).origin === request.nextUrl.origin; } catch { /* Invalid configuration is shown in the dashboard. */ }
@@ -34,6 +36,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isWhoopAdmin())) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (request.headers.get("origin") !== request.nextUrl.origin) return json({ error: "Use this dashboard to run the test." }, 403);
   const session = await getWhoopSession();
   if (!session || isSessionExpiring(session)) return json({ error: "Connect WHOOP again to get a fresh session." }, 401);

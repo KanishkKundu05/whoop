@@ -70,8 +70,9 @@ test('storage failures return retryable HTTP status', async () => {
 });
 
 class WhoopApiError extends Error { constructor(status) { super('provider failure'); this.status = status; } }
-function apiRoute({ session = { accessToken: 'hidden', userId: 7, scope: 'read:profile read:sleep' }, fail, sleeps = [], payload = { records: sleeps } } = {}) {
+function apiRoute({ admin = true, session = { accessToken: 'hidden', userId: 7, scope: 'read:profile read:sleep' }, fail, sleeps = [], payload = { records: sleeps } } = {}) {
   return load('src/app/api/whoop/setup/route.ts', {
+    '@/lib/whoop/admin': { isWhoopAdmin: async () => admin },
     '@/lib/whoop/config': { getConfigStatus: () => ({ isReady: true }) },
     '@/lib/whoop/session': { getWhoopSession: async () => session, isSessionExpiring: s => !!s.expired, setWhoopSessionCookie: () => {} },
     '@/lib/whoop/client': { WhoopApiError, getWhoopProfile: async () => ({ user_id: 7, first_name: 'Test' }), fetchWhoop: async () => { if (fail) throw new WhoopApiError(fail); return payload; } },
@@ -156,3 +157,9 @@ test('only active tests for the matching user accept new events', async () => {
   await setupFunctions.receive.handler(ctx, { ...receiveArgs, eventType: 'recovery.updated' });
   assert.equal(ctx.current().eventType, 'sleep.updated');
 });
+
+ test('developer diagnostics reject non-owner accounts', async () => {
+   const route = apiRoute({ admin: false });
+   assert.equal((await route.POST(apiRequest())).status, 404);
+   assert.equal((await route.GET(apiRequest())).status, 404);
+ });

@@ -1,3 +1,4 @@
+import { requireServerSecret } from "./serverAuth";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
@@ -13,6 +14,7 @@ import {
 
 export const storeDashboardFetch = mutation({
   args: {
+    secret: v.string(),
     fetch: dashboardFetchValidator,
     user: v.optional(whoopUserValidator),
     body: v.optional(bodyMeasurementValidator),
@@ -22,6 +24,10 @@ export const storeDashboardFetch = mutation({
     workouts: v.array(workoutValidator),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
+    const userId = args.fetch.whoopUserId;
+    if ([args.user, args.body, ...args.cycles, ...args.recoveries, ...args.sleeps, ...args.workouts]
+      .some(record => record && record.whoopUserId !== userId)) throw new Error("Account mismatch");
     const now = Date.now();
     const user = args.user ?? {
       whoopUserId: args.fetch.whoopUserId,
@@ -131,12 +137,35 @@ export const storeDashboardFetch = mutation({
   },
 });
 
+export const deleteAccountBatch = mutation({
+  args: { secret: v.string(), whoopUserId: v.number() },
+  handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
+    const id = args.whoopUserId;
+    const groups = await Promise.all([
+      ctx.db.query("whoopUsers").withIndex("by_whoop_user_id", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("bodyMeasurements").withIndex("by_user", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("dashboardFetches").withIndex("by_user_fetched_at", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("cycles").withIndex("by_user_start", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("recoveries").withIndex("by_user_created_at", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("sleeps").withIndex("by_user_start", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("workouts").withIndex("by_user_start", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("dailySmsSubscriptions").withIndex("by_user", q => q.eq("whoopUserId", id)).take(100),
+      ctx.db.query("whoopSetupTests").withIndex("by_user", q => q.eq("whoopUserId", id)).take(100),
+    ]);
+    for (const record of groups.flat()) await ctx.db.delete(record._id);
+    return groups.some(group => group.length === 100);
+  },
+});
+
 export const latestDashboardFetches = query({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const limit = Math.min(args.limit ?? 10, 50);
 
     return ctx.db
@@ -151,10 +180,12 @@ export const latestDashboardFetches = query({
 
 export const latestSleeps = query({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const limit = Math.min(args.limit ?? 10, 50);
 
     return ctx.db
@@ -167,9 +198,11 @@ export const latestSleeps = query({
 
 export const upsertDailySmsSubscription = mutation({
   args: {
+    secret: v.string(),
     subscription: dailySmsSubscriptionValidator,
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const now = Date.now();
     const existing = await ctx.db
       .query("dailySmsSubscriptions")
@@ -204,9 +237,11 @@ export const upsertDailySmsSubscription = mutation({
 
 export const dailySmsSubscriptionStatus = query({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -228,8 +263,9 @@ export const dailySmsSubscriptionStatus = query({
 });
 
 export const activeDailySmsSubscriptions = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { secret: v.string() },
+  handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     return ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_active", (q) => q.eq("active", true))
@@ -239,9 +275,11 @@ export const activeDailySmsSubscriptions = query({
 
 export const activeDailySmsSubscriptionByUser = query({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -255,6 +293,7 @@ export const activeDailySmsSubscriptionByUser = query({
 
 export const updateDailySmsSubscriptionTokens = mutation({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     encryptedAccessToken: v.string(),
     encryptedRefreshToken: v.string(),
@@ -263,6 +302,7 @@ export const updateDailySmsSubscriptionTokens = mutation({
     tokenType: v.string(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -285,10 +325,12 @@ export const updateDailySmsSubscriptionTokens = mutation({
 
 export const setDailySmsSubscriptionActive = mutation({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     active: v.boolean(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -307,6 +349,7 @@ export const setDailySmsSubscriptionActive = mutation({
 
 export const markDailySmsSent = mutation({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     sentAt: v.string(),
     sleepId: v.string(),
@@ -314,6 +357,7 @@ export const markDailySmsSent = mutation({
     providerStatus: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -337,11 +381,13 @@ export const markDailySmsSent = mutation({
 
 export const markDailySmsError = mutation({
   args: {
+    secret: v.string(),
     whoopUserId: v.number(),
     error: v.string(),
     errorAt: v.string(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const subscription = await ctx.db
       .query("dailySmsSubscriptions")
       .withIndex("by_user", (q) => q.eq("whoopUserId", args.whoopUserId))
@@ -361,21 +407,16 @@ export const markDailySmsError = mutation({
 
 export const publicDashboard = query({
   args: {
+    secret: v.string(),
     whoopUserId: v.optional(v.number()),
     rangeDays: v.number(),
     start: v.string(),
   },
   handler: async (ctx, args) => {
+    requireServerSecret(args.secret);
     const rangeDays = Math.min(Math.max(args.rangeDays, 1), 14);
     const limit = 25;
-    const latestFetch = args.whoopUserId
-      ? null
-      : await ctx.db
-          .query("dashboardFetches")
-          .withIndex("by_fetched_at")
-          .order("desc")
-          .first();
-    const whoopUserId = args.whoopUserId ?? latestFetch?.whoopUserId;
+    const whoopUserId = args.whoopUserId;
 
     if (!whoopUserId) {
       return {

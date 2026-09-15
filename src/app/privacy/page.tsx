@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | WHOOP Dashboard",
-  description: "Privacy policy for this personal WHOOP dashboard and connection tester.",
+  description: "Privacy policy for Pace and its connected wearable experiences.",
 };
 
 const sections = [
@@ -51,7 +51,7 @@ const sections = [
       "You can sign out to clear the local session cookie from this app.",
       "Disconnect Spotify on the music page to clear its local cache and session cookie. To revoke the authorization grant itself, remove the app in your Spotify account settings.",
       "You can use Revoke access in the dashboard or manage connected applications in your WHOOP or Garmin account to stop future API access.",
-      "You can request access to or deletion of data collected through this app from the operator of the deployment where you use it. Disconnect WHOOP/Garmin and disable daily messaging before requesting deletion.",
+      "You can delete your stored WHOOP records and daily messaging setup using Delete my WHOOP data on the connection page. This does not delete data held by WHOOP or messages already delivered. Contact the operator for other deletion requests.",
     ],
   },
   {
@@ -106,7 +106,7 @@ export default function PrivacyPolicy() {
             Plain-Language Summary
           </h2>
           <p className="mt-3">
-            This is a personal-use dashboard. It retrieves the provider data you
+            Pace retrieves the provider data you
             authorize, displays it back to you, and can test a signed WHOOP
             webhook. If enabled, it sends a sleep summary to the recipient you
             choose. This codebase does not sell or advertise against your data.

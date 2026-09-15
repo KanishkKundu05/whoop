@@ -4,6 +4,7 @@ import {
   tokenResponseToSession,
 } from "@/lib/whoop/oauth";
 import { revokeWhoopAccess } from "@/lib/whoop/client";
+import { setDailySmsSubscriptionEnabled } from "@/lib/messages/daily-subscriptions";
 import {
   clearWhoopCookies,
   getWhoopSession,
@@ -15,6 +16,9 @@ async function disconnect(request: NextRequest) {
   let accessToken = session?.accessToken;
 
   try {
+    if (session?.userId && (process.env.NEXT_PUBLIC_CONVEX_URL || process.env.CONVEX_URL)) {
+      await setDailySmsSubscriptionEnabled(session.userId, false);
+    }
     if (session?.refreshToken && isSessionExpiring(session)) {
       const token = await refreshWhoopTokens(session.refreshToken);
       accessToken = tokenResponseToSession(token, session).accessToken;
@@ -24,19 +28,19 @@ async function disconnect(request: NextRequest) {
       await revokeWhoopAccess(accessToken);
     }
 
-    const response = NextResponse.redirect(new URL("/?disconnected=1", request.url));
+    const response = NextResponse.redirect(new URL("/whoop", request.url), 303);
     clearWhoopCookies(response);
     return response;
   } catch {
     const response = NextResponse.redirect(
-      new URL("/?auth_error=disconnect_failed", request.url),
+      new URL("/setup/connection?auth_error=disconnect_failed", request.url),
+      303,
     );
-    clearWhoopCookies(response);
     return response;
   }
 }
 
 export async function POST(request: NextRequest) {
+  if (request.headers.get("origin") !== request.nextUrl.origin) return NextResponse.json({ error: "Disconnect from this app." }, { status: 403 });
   return disconnect(request);
 }
-

@@ -167,7 +167,7 @@ export function WhoopSetup({ authError }: { authError?: string }) {
             {!status.config.isReady && <p className="mt-4 text-sm text-amber-800">Set these server variables and restart: {status.config.missing.join(", ")}.</p>}
             {status.session && <p className="mt-4 text-sm text-zinc-600">{status.session.expired ? "Your session has expired. Connect again." : `Connected${status.session.userId ? ` as WHOOP user ${status.session.userId}` : ""}.`} {status.session.hasRefreshToken ? "Offline access granted." : "Offline access not granted; allow the offline scope when reconnecting."}</p>}
             <div className="mt-5 flex flex-wrap items-center gap-4">
-              {status.config.isReady && status.callbackMatchesOrigin !== false && <a className={button} href="/api/auth/whoop?next=/setup/connection">{connected ? "Reconnect WHOOP" : "Connect WHOOP"}<ArrowUpRight size={16} /></a>}
+              {status.config.isReady && status.callbackMatchesOrigin !== false && <a className={button} href="/api/auth/whoop?next=/admin/whoop">{connected ? "Reconnect WHOOP" : "Connect WHOOP"}<ArrowUpRight size={16} /></a>}
               <a href="https://developer-dashboard.whoop.com" target="_blank" rel="noreferrer" className="text-sm underline underline-offset-4">Developer settings</a>
             </div>
           </Step>}
@@ -178,7 +178,7 @@ export function WhoopSetup({ authError }: { authError?: string }) {
               <p className="font-semibold">Account connected, but sleep data is not verified.</p>
               <p>WHOOP returned an empty sleep list for {api.name || "your account"} (user {api.userId}). Checked {new Date(api.testedAt).toLocaleTimeString()}.</p>
               <p>This check has no start-date filter. If your phone shows sleep records, confirm you connected the same WHOOP account. Reconnect to check the account and grant sleep access, then run again.</p>
-              <a className="underline underline-offset-4" href="/api/auth/whoop?next=/setup/connection">Reconnect WHOOP</a>
+              <a className="underline underline-offset-4" href="/api/auth/whoop?next=/admin/whoop">Reconnect WHOOP</a>
               <details className="mt-3"><summary className="cursor-pointer">Connection diagnostics</summary><pre className="mt-2 overflow-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify(api.diagnostics, null, 2)}</pre></details>
             </div>}
             {apiPassed && api && <div className="mt-5 rounded-xl bg-lime-50 p-4 text-sm leading-6">

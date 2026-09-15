@@ -1,6 +1,6 @@
 import "server-only";
 
-import { fetchQuery } from "convex/nextjs";
+import { fetchQuery } from "@/lib/convex/server";
 import { makeFunctionReference } from "convex/server";
 import type {
   BodyMeasurementInput,

@@ -1,3 +1,4 @@
+import { isWhoopAdmin } from "@/lib/whoop/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { syncWhoopDashboardData } from "@/lib/convex/whoop-sync";
 import { getRecentWhoopData } from "@/lib/whoop/client";
@@ -35,6 +36,7 @@ function hasConvexUrl() {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await isWhoopAdmin())) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const config = getConfigStatus(request);
   let session = await getWhoopSession();
 

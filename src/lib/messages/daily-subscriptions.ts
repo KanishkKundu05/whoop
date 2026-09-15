@@ -1,6 +1,6 @@
 import "server-only";
 
-import { fetchMutation, fetchQuery } from "convex/nextjs";
+import { fetchMutation, fetchQuery } from "@/lib/convex/server";
 import { makeFunctionReference } from "convex/server";
 import type {
   DailySmsSubscriptionInput,
@@ -115,6 +115,7 @@ export function getDailySmsConfigStatus() {
     if (!["https:", "http:"].includes(url.protocol)) missing.push("NEXT_PUBLIC_CONVEX_URL");
   } catch { missing.push("NEXT_PUBLIC_CONVEX_URL"); }
   if (!process.env.DAILY_MESSAGE_SECRET || process.env.DAILY_MESSAGE_SECRET.length < 32) missing.push("DAILY_MESSAGE_SECRET");
+  if ((process.env.WHOOP_SERVER_SECRET?.length ?? 0) < 32) missing.push("WHOOP_SERVER_SECRET");
   if (!process.env.LINQ_API_KEY?.trim()) missing.push("LINQ_API_KEY");
 
   return {

@@ -1,11 +1,13 @@
 # Connection dashboard
 
-Open `/setup` (or click **Connection setup** on the main dashboard).
+Owner diagnostic tool: open `/admin/whoop` after connecting the account configured
+as `WHOOP_ADMIN_USER_ID`. Public visitors use `/setup/connection`; see
+[Public onboarding](public-whoop-onboarding.md) for deployment settings.
 
 1. Set the existing `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET`, and
    `WHOOP_SESSION_SECRET` environment variables. The page shows any missing values
    and the exact OAuth callback URL to register in WHOOP.
-2. Click **Connect WHOOP** and authorize your own account. You return to `/setup`.
+2. Click **Connect WHOOP** and authorize your own account. You return to `/admin/whoop`.
 3. Click **Run API test**. This makes two read-only WHOOP v2 calls: profile and up
    to five recent sleeps. An empty sleep list leaves sleep data unverified and
    shows account and request diagnostics; a malformed response or API error

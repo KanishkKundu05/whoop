@@ -13,6 +13,7 @@ export function whoopAuthError(code?: string) {
     missing_config: "WHOOP connection is being configured. Please try again later.",
     session_expired: "Your WHOOP connection expired. Reconnect to continue.",
     refresh_failed: "We couldn’t renew your WHOOP connection. Please reconnect.",
+    disconnect_failed: "We couldn’t finish disconnecting WHOOP. Please try again.",
     state_mismatch: "Your sign-in session expired. Please start again.",
   };
   return messages[code] ?? "We couldn’t connect to WHOOP. Please try again.";

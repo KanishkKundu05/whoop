@@ -183,7 +183,7 @@ async function fetchWhoopCollections(accessToken: string, query?: Query) {
 }
 
 export async function getWhoopProfile(accessToken: string) {
-  return fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic");
+  return fetchWhoop<UserBasicProfile>(accessToken, "/v2/user/profile/basic", undefined, { signal: AbortSignal.timeout(12000) });
 }
 
 export async function getWhoopSleep(accessToken: string, sleepId: string) {
