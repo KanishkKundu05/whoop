@@ -10,7 +10,7 @@ export function OnboardingShell({ children, backHref = "/", backLabel = "All dev
   return <main className="min-h-screen bg-[#f5f6f3] text-zinc-950">
     <div className={`mx-auto px-5 py-7 sm:px-8 sm:py-10 ${wide ? "max-w-6xl" : "max-w-3xl"}`}>
       <nav aria-label="Main navigation" className="mb-12 flex items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-2 text-sm font-bold tracking-tight"><Activity size={22} className="text-lime-700" />PACE<span className="font-normal text-zinc-400">/ your daily rhythm</span></Link>
+        <Link href="/" className="flex items-center gap-2 text-sm font-bold tracking-tight"><Activity size={22} className="text-lime-700" />PACE<span className="hidden font-normal text-zinc-400 sm:inline">/ your daily rhythm</span></Link>
         <Link href={backHref} prefetch={false} className="inline-flex min-h-11 items-center gap-2 text-sm text-zinc-600 hover:text-zinc-950"><ArrowLeft size={15} /><span>{backLabel}</span></Link>
       </nav>
       {children}
