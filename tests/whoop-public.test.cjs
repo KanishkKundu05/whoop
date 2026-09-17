@@ -80,7 +80,7 @@ async function connectionHtml(session, sleeps = [], fail = false) {
 }
 test('public onboarding has an OAuth action without developer configuration', async () => {
   const html = await connectionHtml(null);
-  assert.match(html, /Connect WHOOP/); assert.match(html, /next=\/setup\/connection/);
+  assert.match(html, /Connect WHOOP/); assert.match(html, /href="\/api\/auth\/whoop\?next=\/whoop"/);
   assert.doesNotMatch(html, /WHOOP_SETUP_SECRET|Convex|webhook|Run API test/);
 });
 test('connected users automatically see their email and sleep; empty and error results stay distinct', async () => {

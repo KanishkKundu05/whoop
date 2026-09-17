@@ -9,7 +9,7 @@ import { whoopAuthError } from "@/lib/auth/navigation";
 import { WhoopAccountControls } from "@/components/whoop-account-controls";
 import type { PaginatedWhoopResponse, Sleep, UserBasicProfile } from "@/lib/whoop/types";
 
-const connectUrl = "/api/auth/whoop?next=/setup/connection";
+const connectUrl = "/api/auth/whoop?next=/whoop";
 
 export async function WhoopConnection({ authError }: { authError?: string }) {
   const session = await getWhoopSession();
