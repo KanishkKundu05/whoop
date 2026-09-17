@@ -25,7 +25,7 @@ async function handle(request: NextRequest, context: Context) {
       const c = config();
       const state = randomBytes(32).toString("hex");
       const url = new URL("https://accounts.spotify.com/authorize");
-      url.search = new URLSearchParams({ client_id: c.clientId, response_type: "code", redirect_uri: c.redirectUri, scope: SCOPES, state }).toString();
+      url.search = new URLSearchParams({ client_id: c.clientId, response_type: "code", redirect_uri: c.redirectUri, scope: SCOPES, state, show_dialog: "true" }).toString();
       const response = NextResponse.redirect(url);
       response.cookies.set(STATE, state, { ...cookieOptions, maxAge: 600 });
       return finish(response);
@@ -36,7 +36,7 @@ async function handle(request: NextRequest, context: Context) {
       const code = request.nextUrl.searchParams.get("code");
       const response = NextResponse.redirect(new URL("/whoop/music", config().redirectUri));
       response.cookies.set(STATE, "", { ...cookieOptions, maxAge: 0 });
-      if (!expected || state.length !== expected.length || !timingSafeEqual(Buffer.from(state), Buffer.from(expected)) || !code || request.nextUrl.searchParams.has("error")) {
+      if (!expected || Buffer.byteLength(state) !== Buffer.byteLength(expected) || !timingSafeEqual(Buffer.from(state), Buffer.from(expected)) || !code || request.nextUrl.searchParams.has("error")) {
         response.headers.set("Location", new URL("/whoop/music?spotify_error=authorization_failed", config().redirectUri).toString());
         return finish(response);
       }
@@ -66,6 +66,25 @@ async function handle(request: NextRequest, context: Context) {
       if (action === "status") {
         const me = await spotify<{ id: string; display_name?: string }>(session, "me");
         return finish(NextResponse.json({ connected: true, configured: true, id: me.id, name: me.display_name ?? me.id }));
+      }
+      if (action === "playlists") {
+        const offset = Number(request.nextUrl.searchParams.get("offset") ?? 0);
+        if (!Number.isSafeInteger(offset) || offset < 0 || offset > 100000) throw new ApiError("Invalid playlist offset.", 400);
+        const page = await spotify<{ items: ({ id: string; name: string; owner?: { id: string }; collaborative?: boolean } | null)[]; next: string | null }>(session, `me/playlists?limit=50&offset=${offset}`);
+        const me = await spotify<{ id: string }>(session, "me");
+        return finish(NextResponse.json({ playlists: page.items.flatMap(p => p && idPattern.test(p.id) ? [{ id: p.id, name: p.name, importable: p.owner?.id === me.id || p.collaborative === true }] : []), nextOffset: page.next ? offset + 50 : null }));
+      }
+      if (action === "playlist-tracks") {
+        const id = request.nextUrl.searchParams.get("id") ?? "";
+        const offset = Number(request.nextUrl.searchParams.get("offset") ?? 0);
+        if (!idPattern.test(id) || !Number.isSafeInteger(offset) || offset < 0) throw new ApiError("Invalid playlist or offset.", 400);
+        type Item = Track & { type?: string };
+        const page = await spotify<{ items: { item?: Item | null; track?: Item | null }[]; next: string | null; total: number }>(session, `playlists/${id}/items?limit=50&offset=${offset}`);
+        const tracks = page.items.flatMap(entry => {
+          const t = entry.item ?? entry.track;
+          return t && idPattern.test(t.id) && t.uri === `spotify:track:${t.id}` && !t.is_local && t.is_playable !== false && (!t.type || t.type === "track") ? [t] : [];
+        });
+        return finish(NextResponse.json({ tracks, nextOffset: page.next ? offset + 50 : null, total: page.total }));
       }
       if (action === "library") {
         const offset = Number(request.nextUrl.searchParams.get("offset") ?? 0);
@@ -107,6 +126,11 @@ async function handle(request: NextRequest, context: Context) {
     }
     throw new ApiError("Unknown Spotify operation.", 404);
   } catch (error) {
+    if (action === "callback" || action === "connect") {
+      const response = NextResponse.redirect(new URL("/whoop/music?spotify_error=authorization_failed", request.url));
+      response.cookies.set(STATE, "", { ...cookieOptions, maxAge: 0 });
+      return finish(response);
+    }
     const known = error instanceof ApiError;
     return finish(NextResponse.json({ error: known ? error.message : "Connection failed. Check Spotify's queue before retrying playback commands." }, { status: known ? error.status : 502, headers: known && error.retryAfter ? { "Retry-After": error.retryAfter } : undefined }));
   }

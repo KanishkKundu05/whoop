@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 export const SESSION = "__spotify_session";
 export const STATE = "__spotify_state";
-export const SCOPES = "user-library-read user-read-playback-state user-modify-playback-state";
+export const SCOPES = "user-library-read playlist-read-private playlist-read-collaborative user-read-playback-state user-modify-playback-state";
 export type Session = { accessToken: string; refreshToken: string; expiresAt: number };
 export const cookieOptions = { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
 
