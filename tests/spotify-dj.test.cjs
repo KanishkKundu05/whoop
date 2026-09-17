@@ -186,3 +186,44 @@ test('cache is account-isolated, expires and removes data on disconnect', () => 
   assert.equal(cache.readCache('alice').length, 0);
   delete global.localStorage;
 });
+
+test('playlist listing paginates and identifies importable sources', async () => {
+  const route = routeWith({ call: async (_, path) => {
+    if (path === 'me') return { id: 'alice' };
+    assert.equal(path, 'me/playlists?limit=50&offset=50');
+    return { items: [null, { id, name: 'Mine', owner: { id: 'alice' } }, { id: nextId, name: 'Followed', owner: { id: 'bob' } }], next: 'next' };
+  } });
+  const response = await route.GET(request('playlists?offset=50'), context('playlists'));
+  const body = await response.json();
+  assert.equal(body.nextOffset, 100);
+  assert.deepEqual(body.playlists.map(p => p.importable), [true, false]);
+  assert.equal((await route.GET(request('playlists?offset=-1'), context('playlists'))).status, 400);
+});
+
+test('playlist import uses current endpoint and skips episodes, local and unavailable items', async () => {
+  const route = routeWith({ call: async (_, path) => {
+    assert.equal(path, `playlists/${id}/items?limit=50&offset=50`);
+    return { items: [
+      { item: { ...track(id, 120), type: 'track' } },
+      { track: track(nextId, 130) },
+      { item: null },
+      { item: { ...track(id, 120), type: 'episode' } },
+      { item: { ...track(id, 120), is_local: true } },
+      { item: { ...track(id, 120), is_playable: false } },
+    ], next: 'next', total: 101 };
+  } });
+  const body = await (await route.GET(request(`playlist-tracks?id=${id}&offset=50`), context('playlist-tracks'))).json();
+  assert.deepEqual(body.tracks.map(t => t.id), [id, nextId]);
+  assert.equal(body.nextOffset, 100);
+  assert.equal((await route.GET(request('playlist-tracks?id=invalid'), context('playlist-tracks'))).status, 400);
+});
+
+test('OAuth cancellation and failed exchange return to music with cleared state', async () => {
+  for (const query of ['state=expected&error=access_denied', 'state=expected&code=expired', 'state=éééé&code=secret']) {
+    const route = routeWith({ tokenCall: async () => { throw new ApiError('Expired', 401); } });
+    const response = await route.GET(request(`callback?${query}`), context('callback'));
+    assert.equal(response.status, 307);
+    assert.match(response.headers.get('location'), /whoop\/music\?spotify_error/);
+    assert.match(response.headers.get('set-cookie'), /Max-Age=0/);
+  }
+});

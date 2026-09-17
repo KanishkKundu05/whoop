@@ -326,7 +326,9 @@ npm run build
 
 ## Spotify live BPM DJ
 
-The `/whoop/music` experience now imports Spotify liked songs, resolves BPM with
+The `/whoop/music` experience offers Spotify, Apple Music, and SoundCloud cards. Spotify is implemented;
+Apple Music and SoundCloud are marked coming soon. Spotify imports all liked songs
+and selected playlists, resolves BPM with
 ReccoBeats, and selects the next track using live WHOOP Bluetooth heart rate about
 **15 seconds before each song finishes**. It queues the match and lets Spotify
 finish the current song naturally. The dashboard's older SoundCloud DJ remains
@@ -351,11 +353,21 @@ available separately.
    the same `127.0.0.1` origin and reconnect there so its session cookie is available.
 3. Connect WHOOP, visit `/whoop/music`, then connect Spotify. Spotify Premium and
    access to your development-mode app are required. Requested scopes are
-   `user-library-read`, `user-read-playback-state`, and
+   `user-library-read`, `playlist-read-private`, `playlist-read-collaborative`,
+   `user-read-playback-state`, and
    `user-modify-playback-state`. Tokens are encrypted in an HTTP-only cookie.
-4. Sync liked songs. ReccoBeats requires no API key. Imports paginate through the
-   entire library, checkpoint completed BPM lookups, and can resume after failure.
-   Only exact Spotify-ID mappings are accepted; missing BPMs are excluded.
+4. Click the Spotify card to authorize, then choose All Liked Songs and/or playlists
+   and click **Import selected music**. Existing connections must reconnect to grant
+   the new playlist scopes. Spotify currently permits playlist item access only for
+   playlists the user owns or collaborates on; other playlists are disabled.
+   Imports paginate through every selected source, deduplicate by Spotify track ID,
+   and save metadata before BPM enrichment. Each successful sync replaces the prior
+   library selection. ReccoBeats requires no API key; completed lookups are checkpointed
+   and can resume after failure. Songs without BPM remain imported but are excluded
+   from DJ matching. Imports are browser-local and expire after seven days.
+
+   Production callback: `https://whoop-delta-sable.vercel.app/api/spotify/callback`.
+   Register that exact URL in Spotify and set `SPOTIFY_REDIRECT_URI` to match.
 5. Enable WHOOP **Heart Rate Broadcast**, then use **Connect WHOOP Bluetooth** in a
    supported Chrome/Edge browser. Safari/iPhone browsers need a native bridge,
    which is not included. Bluetooth must be available on the listening device.
