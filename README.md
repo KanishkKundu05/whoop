@@ -138,6 +138,10 @@ The public page intentionally omits email and body measurements.
 
 ## Wake-Triggered Linq Message
 
+For local messaging through the installed CLI, see [Linq CLI development setup](docs/linq-cli-development.md).
+Set `LINQ_TRANSPORT=cli` with `npm run dev` to opt in. The existing REST sender
+remains the default for production.
+
 Start with **[Connection setup](/setup)** in the app before enabling messages.
 The dashboard walks through WHOOP consent, a read-only profile/sleep API test,
 and receipt of a real signed `sleep.updated` webhook. See
