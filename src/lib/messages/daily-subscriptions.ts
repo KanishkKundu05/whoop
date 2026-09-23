@@ -116,7 +116,13 @@ export function getDailySmsConfigStatus() {
   } catch { missing.push("NEXT_PUBLIC_CONVEX_URL"); }
   if (!process.env.DAILY_MESSAGE_SECRET || process.env.DAILY_MESSAGE_SECRET.length < 32) missing.push("DAILY_MESSAGE_SECRET");
   if ((process.env.WHOOP_SERVER_SECRET?.length ?? 0) < 32) missing.push("WHOOP_SERVER_SECRET");
-  if (!process.env.LINQ_API_KEY?.trim()) missing.push("LINQ_API_KEY");
+  const transport = process.env.LINQ_TRANSPORT?.trim() || "api";
+  if (transport === "cli") {
+    if (process.env.NODE_ENV !== "development") missing.push("LINQ_TRANSPORT (cli requires development)");
+  } else {
+    if (transport !== "api") missing.push("LINQ_TRANSPORT (api or cli)");
+    if (!process.env.LINQ_API_KEY?.trim()) missing.push("LINQ_API_KEY");
+  }
 
   return {
     isReady: missing.length === 0,

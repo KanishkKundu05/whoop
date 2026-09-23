@@ -45,6 +45,12 @@ export async function sendLinqTextMessage({
   body: string;
   idempotencyKey: string;
 }): Promise<LinqSendResult> {
+  const transport = process.env.LINQ_TRANSPORT?.trim() || "api";
+  if (transport === "cli") {
+    const { sendLinqCliTextMessage } = await import("./linq-cli");
+    return sendLinqCliTextMessage(to, body);
+  }
+  if (transport !== "api") throw new Error("LINQ_TRANSPORT must be api or cli.");
   const preferredService = getPreferredService();
   const payload = {
     to: [to],
