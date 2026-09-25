@@ -161,8 +161,9 @@ Good morning Mom - I woke up at 7:12 AM, slept 7h 34m, and went to sleep at 11:1
 It uses the WHOOP `sleep.updated` webhook as the primary trigger, fetches that
 sleep from the WHOOP API, waits for a scored non-nap sleep, and sends through
 Linq over iMessage/RCS/SMS. The sleep `end` timestamp is used as the wake-up
-time. The `/api/messages/daily/cron` route is a future reconciliation fallback
-for missed webhooks. Its schedule is disabled during connection testing.
+time. The `/api/messages/daily/cron` route is a reconciliation fallback
+for missed webhooks, scheduled daily at 04:30 UTC (10:00 AM India time).
+The schedule takes effect on production deployment and requires `CRON_SECRET`.
 
 Setup:
 
