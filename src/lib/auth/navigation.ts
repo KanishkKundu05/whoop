@@ -1,5 +1,5 @@
 /** Keep OAuth return paths on this app, including URL-parser edge cases. */
-export function safeNextPath(value: string | null | undefined, fallback = "/whoop") {
+export function safeNextPath(value: string | null | undefined, fallback = "/dashboard") {
   if (!value || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u0020]/.test(value)) {
     return fallback;
   }

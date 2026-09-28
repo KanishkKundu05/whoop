@@ -9,9 +9,8 @@ import { whoopAuthError } from "@/lib/auth/navigation";
 import { WhoopAccountControls } from "@/components/whoop-account-controls";
 import type { PaginatedWhoopResponse, Sleep, UserBasicProfile } from "@/lib/whoop/types";
 
-const connectUrl = "/api/auth/whoop?next=/whoop";
-
-export async function WhoopConnection({ authError }: { authError?: string }) {
+export async function WhoopConnection({ authError, nextPath = "/dashboard" }: { authError?: string; nextPath?: string }) {
+  const connectUrl = `/api/auth/whoop?next=${encodeURIComponent(nextPath)}`;
   const session = await getWhoopSession();
   const connected = !!session && !isSessionExpiring(session);
   if (session && !connected && session.refreshToken && !authError) redirect("/api/auth/refresh?next=/setup/connection");
@@ -30,7 +29,7 @@ export async function WhoopConnection({ authError }: { authError?: string }) {
   const latest = sleeps?.find(sleep => !sleep.nap) ?? sleeps?.[0];
   const stages = latest?.score?.stage_summary;
   const minutes = stages ? Math.round((stages.total_light_sleep_time_milli + stages.total_slow_wave_sleep_time_milli + stages.total_rem_sleep_time_milli) / 60000) : null;
-  return <OnboardingShell backHref="/whoop" backLabel="WHOOP experiences">
+  return <OnboardingShell navigation={connected} backHref={connected ? "/dashboard" : "/"} backLabel={connected ? "Overview" : "Home"}>
     <ShieldCheck size={36} className="text-lime-700" />
     <h1 className="mt-5 text-3xl font-semibold tracking-tight">{connected ? "Your WHOOP, connected." : "Bring your WHOOP along."}</h1>
     <p className="mt-4 text-zinc-600">{connected ? "Your latest sleep, in one place." : "Sign in with the same email you use in the WHOOP phone app. We’ll bring in your latest sleep automatically."}</p>
@@ -43,9 +42,11 @@ export async function WhoopConnection({ authError }: { authError?: string }) {
         <div className="mt-5 flex flex-wrap gap-8"><div><p className="text-xs text-zinc-500">Time asleep</p><p className="mt-1 text-2xl font-semibold">{minutes === null ? "Processing" : `${Math.floor(minutes / 60)}h ${minutes % 60}m`}</p></div><div><p className="text-xs text-zinc-500">Sleep performance</p><p className="mt-1 text-2xl font-semibold">{latest.score?.sleep_performance_percentage == null ? "Processing" : `${Math.round(latest.score.sleep_performance_percentage)}%`}</p></div></div>
       </section>}
       {sleeps?.length === 0 && <p role="status" className="mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">WHOOP hasn’t returned any sleep for this account. Check that the email above matches your phone account, and that your latest sleep has synced. You can switch accounts below.</p>}
-      <div className="mt-6 flex flex-wrap gap-3"><Link href="/whoop" className={primaryAction}>Explore experiences</Link><a href="/setup/connection" className={secondaryAction}>Refresh sleep</a><a href={connectUrl} className={secondaryAction}>Switch WHOOP account</a></div>
+      <div className="mt-6 flex flex-wrap gap-3"><Link href="/dashboard" className={primaryAction}>Open dashboard</Link><a href="/setup/connection" className={secondaryAction}>Refresh sleep</a><a href={connectUrl} className={secondaryAction}>Switch WHOOP account</a></div>
       <WhoopAccountControls />
+      <form action="/api/auth/logout" method="post" className="mt-5"><button className={secondaryAction}>Sign out</button></form>
     </>}
+    {!connected && <Link href="/demo" className={`${secondaryAction} mt-4`}>Try a demo first</Link>}
     <p className="mt-6 text-xs leading-6 text-zinc-500">Your password stays with WHOOP. You control access to your data.</p>
   </OnboardingShell>;
 }

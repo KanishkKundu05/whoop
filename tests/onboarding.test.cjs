@@ -20,14 +20,14 @@ function load(file, mocks = {}) {
 }
 
 const navigation = load('src/lib/auth/navigation.ts');
-test('OAuth returns to WHOOP choices by default and rejects external return URLs', () => {
+test('OAuth returns to Overview by default and rejects external return URLs', () => {
   for (const value of [null, undefined, '', 'https://evil.test', '//evil.test', '/\\evil.test', '/\n/evil.test']) {
-    assert.equal(navigation.safeNextPath(value), '/whoop');
+    assert.equal(navigation.safeNextPath(value), '/dashboard');
   }
   assert.equal(navigation.safeNextPath('/setup?step=recipient'), '/setup?step=recipient');
 });
 
-test('successful WHOOP OAuth returns to the feature chooser and persists the session', async () => {
+test('successful WHOOP OAuth returns to the dashboard and persists the session', async () => {
   let saved = false;
   const route = load('src/app/api/auth/whoop/callback/route.ts', {
     '@/lib/auth/navigation': navigation,
@@ -44,7 +44,7 @@ test('successful WHOOP OAuth returns to the feature chooser and persists the ses
   const response = await route.GET(new NextRequest('https://example.com/api/auth/whoop/callback?state=valid&code=code', {
     headers: { cookie: 'state=valid' },
   }));
-  assert.equal(response.headers.get('location'), 'https://example.com/whoop');
+  assert.equal(response.headers.get('location'), 'https://example.com/dashboard');
   assert.equal(saved, true);
 });
 
@@ -58,7 +58,7 @@ test('cancelled OAuth returns a recoverable error without exchanging credentials
     },
   });
   const response = await route.GET(new NextRequest('https://example.com/api/auth/whoop/callback?error=access_denied'));
-  assert.equal(response.headers.get('location'), 'https://example.com/whoop?auth_error=access_denied');
+  assert.equal(response.headers.get('location'), 'https://example.com/dashboard?auth_error=access_denied');
 });
 
 const template = load('src/lib/messages/template.ts');

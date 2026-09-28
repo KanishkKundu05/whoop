@@ -8,5 +8,5 @@ export default async function SetupPage({ searchParams }: { searchParams: Promis
   const { step } = await searchParams;
   const greeting = process.env.DAILY_MESSAGE_GREETING?.trim() || DEFAULT_DAILY_GREETING;
   const preview = formatDailyMessage({ greeting, wakeTime: "7:12 AM", sleepDuration: "7h 34m", sleepStart: "11:14 PM" });
-  return <OnboardingShell backHref="/whoop" backLabel="WHOOP experiences"><MorningTextOnboarding requestedStep={step} preview={preview} greeting={greeting} /></OnboardingShell>;
+  return <OnboardingShell navigation backHref="/dashboard" backLabel="Overview"><MorningTextOnboarding requestedStep={step} preview={preview} greeting={greeting} /></OnboardingShell>;
 }
