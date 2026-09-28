@@ -28,7 +28,7 @@ as `WHOOP_ADMIN_USER_ID`. Public visitors use `/setup/connection`; see
    Restore the sleep time afterward. This is WHOOP's documented
    [webhook testing procedure](https://developer.whoop.com/docs/developing/webhooks/#webhooks-testing).
 
-WHOOP requires public HTTPS for webhooks. For local testing, open `/setup` through
+WHOOP requires public HTTPS for webhooks. For local testing, open `/admin/whoop` through
 an HTTPS tunnel to the local server and register that origin's URLs. Use the
 same browser origin throughout OAuth. Ensure `WHOOP_REDIRECT_URI` matches the
 tunnel origin if explicitly set. Hosting login protection must not block WHOOP.
@@ -46,8 +46,9 @@ The existing refresh ownership issue still needs fixing before daily messaging.
 If you already use the daily sender, turn it off before this diagnostic flow.
 
 Linq credentials, a recipient, and `CRON_SECRET` are not needed for these checks.
-The production setup deployment has an empty `crons` list in `vercel.json`.
-Existing messaging routes still exist; enable scheduling separately when ready.
+The reconciliation cron in `vercel.json` runs at 04:30 UTC daily. Configure
+`CRON_SECRET` for authenticated cron requests; the WHOOP webhook remains the
+primary delivery trigger.
 API-test results are displayed for the current page visit; webhook
 receipts survive reloads in Convex.
 

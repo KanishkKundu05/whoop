@@ -1,32 +1,61 @@
-# Device and WHOOP onboarding
+# Navigation and onboarding
 
-The home page (`/`) offers Garmin, Apple Watch, and WHOOP. Garmin and Apple Watch are marked coming soon. The WHOOP card opens `/setup/connection`, a three-step configuration funnel. Authorization started in the funnel returns there and resumes at the data check. The `/whoop` page is where a connected user chooses music pacing (`/whoop/music`) or morning sleep texts (`/setup`). Anonymous visits to either experience return to the WHOOP connection screen. Expired sessions use the existing refresh endpoint and return to a reconnect screen if renewal fails.
+The supported journey is **Landing → Demo or Connect WHOOP → Overview → Music /
+Morning texts**. The shared navigation links Overview, Music, Morning texts, and
+Account. Returning users can open their dashboard directly from the landing page.
 
-Morning texts use four steps, with a progress indicator above the current panel:
+| Route | Purpose |
+| --- | --- |
+| `/` | Product introduction, Connect WHOOP, Try a demo |
+| `/demo` | Public synthetic metrics, simulated music match, sample message preview |
+| `/dashboard` | Authenticated overview, trends, feature statuses, deeper health details |
+| `/whoop` | Compatibility redirect to Overview; auth errors go to Account |
+| `/whoop/music` | Spotify setup and live DJ |
+| `/setup` | Morning-text preview, recipient, confirmation, saved status |
+| `/setup/connection` | Visitor connection, latest sleep, account controls |
+| `/admin/whoop` | Owner-only API and signed webhook diagnostic wizard |
+| `/daily-message` | Compatibility redirect to `/setup` |
 
-1. WHOOP: the authorized account is already connected.
-2. Delivery: check server configuration and offline access; expose Linq/storage/webhook instructions under app-owner settings.
-3. Sleep report: preview the same formatter and configured greeting used by the sender, with explicitly illustrative sleep values.
-4. Recipient: validate an international phone number, acknowledge sharing, and explicitly enable messages.
+OAuth defaults to Overview. Account switches return there too. The dashboard
+refresh link retains the selected date range. Anonymous dashboard visitors see the
+connection page with a demo option. Expired sessions refresh where possible.
 
-Back/Continue navigation uses `?step=` and browser history. The phone draft survives navigation between steps in the mounted flow but is not written to browser storage. Activation is restored from server subscription status, never from a completion URL. Only the number’s last four digits are returned by the API. Saving enables the existing subscription and does not send a test text. Users can change the recipient or turn messages off after activation.
+The demo uses synthetic values only. It never calls provider or messaging APIs,
+reads a user's metrics, or writes subscriptions. The greeting and heart-rate slider
+live only in component state. Demo text explicitly distinguishes previews from
+real playback, delivery, and settings.
 
-The former data dashboard remains at `/dashboard`; advanced WHOOP connection checks are at `/setup/connection`. The old `/daily-message` URL redirects to `/setup`.
+## Morning texts
 
-## Deployment configuration
+Connection and server configuration are checked automatically. The visible flow is:
 
-The onboarding checks the Convex URL, a `DAILY_MESSAGE_SECRET` of at least 32 characters, and a nonblank `LINQ_API_KEY`. Configure a Linq sending line and deploy the existing Convex schema/functions. Preserve existing encryption secrets. Register the app’s public HTTPS `/api/whoop/webhook` endpoint with WHOOP using model v2, replacing the test listener URL. Optional `DAILY_MESSAGE_GREETING` controls the greeting in both preview and sent report.
+1. **Preview:** show the production formatter with sample sleep values.
+2. **Recipient:** normalize an international number and acknowledge sharing consent.
+3. **Enable:** review the number and explicitly save/activate the subscription.
 
-Configuration presence does not verify Linq credentials, webhook registration, or handset receipt. Sending still uses the existing scored-sleep webhook pipeline, not a scheduled wake-up time. No changes to external credentials, webhook registration, or scheduled jobs are part of this UI change. The sender limitations recorded in `whoop-linq-personal-setup.md` still apply; a successful onboarding is not an end-to-end delivery certification.
+Incomplete delivery configuration does not block the preview, but activation is
+disabled with an explanation. Technical instructions stay under app-owner details.
+Completion is read from the server, never trusted from `?step=complete`. The recipient
+draft survives in-app Back/Continue but is not persisted to browser storage; reloading
+a review URL returns to the recipient form. Old step URLs safely fall back to preview.
+
+Enabled subscriptions distinguish “Waiting for first sleep update” from “Report
+requested.” Neither claims handset receipt. Changing a recipient and turning off
+messages remain available. Saving does not send a test message.
+
+## Music
+
+Show Premium and Bluetooth requirements before connecting/importing. A four-part
+progress indicator tracks Spotify connection, two or more BPM-ready songs, sensor
+readings, and the running DJ. Imported music can be collapsed once ready; pairing
+and playback controls remain accessible. A disabled Start button has a nearby
+explanation. Existing queue verification, visibility, and stale-sensor protections
+remain in place.
 
 ## Verification
 
-Run `npm run lint`, `npx tsc --noEmit`, `node --test tests/*.test.cjs`, and `npm run build`.
-
-Browser checks use a synthetic authenticated session and intercepted messaging responses; they never call Linq or write subscriptions to Convex. Cover the anonymous gate, WHOOP feature choices, desktop/mobile layouts, Back/Continue and browser history, invalid number, failed-save retry, completion after reload, configuration gating, expired sessions, and disabling messages. A live delivery check requires a configured Linq line, WHOOP webhook, and an explicitly chosen recipient.
-
-## WHOOP configuration funnel
-
-`/setup/connection` shows one panel at a time: authorize WHOOP, verify profile/sleep API access, then receive a signed sleep update. Continue requires the active check to pass; Back and the progress rail revisit accessible steps. API verification stays in memory and must be rerun after a reload; the session and webhook receipt are read from the server. A missing or expired session returns the flow to connection. An API result only counts for the currently connected user.
-
-The WHOOP skin uses route-scoped Funnel Display headings, an ivory background, forest-green actions, and a responsive progress rail. Completion hands off to the existing `/setup` morning-text flow. Linq, recipient activation, and delivery reliability remain separate; this funnel never sends a message. Garmin and Apple Watch remain coming soon as described in `TODO.md`.
+Run the commands in the README. Browser checks should cover demo interactions,
+mobile overflow, navigation, anonymous gates, preview/recipient/review, invalid
+phone numbers, failed saves, reload and browser Back, incomplete configuration,
+and disabling a subscription. Use mocked provider responses for UI checks; real
+OAuth, hardware playback, and message delivery need configured services.

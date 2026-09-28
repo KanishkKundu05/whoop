@@ -1,8 +1,9 @@
 # Public WHOOP onboarding
 
-Visitors use `/whoop` → `/setup/connection` → WHOOP consent. After consent,
-Pace automatically reads the authenticated account's profile and latest five
-sleep records. The connected email is displayed so visitors can spot a different
+Visitors use `/` → `/setup/connection` → WHOOP consent → `/dashboard`.
+The `/demo` route lets them try synthetic data without connecting. After consent,
+Overview reads their recent metrics; Account (`/setup/connection`) reads the
+authenticated profile and latest five sleep records. The connected email is displayed so visitors can spot a different
 account from the one used on their phone. Empty history and provider failures
 have separate retry/switch-account messages. No developer setup or manual
 webhook test is required for a visitor.
