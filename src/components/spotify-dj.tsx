@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { Cloud, Music2, Radio, ArrowUpRight } from "lucide-react";
+import { Check, Radio } from "lucide-react";
 import { bluetoothAvailable, connectHeartRate } from "@/lib/spotify/bluetooth";
 import { CACHE_TTL, clearCache, readCache, saveCache } from "@/lib/spotify/cache";
 import { chooseTrack, DecisionClock, targetHeartRate, type BpmTrack, type Playback, type Sample, type Track } from "@/lib/spotify/dj";
@@ -224,27 +224,33 @@ export function SpotifyDj() {
   }
 
   const matched = tracks.filter(t => t.bpm !== null);
+  const startBlocker = busy ? "Wait for the current operation to finish."
+    : matched.length < 2 ? "Import at least two songs with BPM data."
+    : hr === null ? "Connect WHOOP Bluetooth and wait for a heart-rate reading." : null;
+  const setupSteps = [
+    { label: "Connect Spotify", done: !!account },
+    { label: "Choose music", done: matched.length >= 2 },
+    { label: "Pair WHOOP", done: hr !== null },
+    { label: "Start listening", done: running },
+  ];
   return <>
-    <div className="mb-8 grid gap-4 sm:grid-cols-3" aria-label="Music services">
-      <button disabled={!loaded || busy || (!account && !configured)} onClick={() => account ? document.getElementById("spotify-library")?.scrollIntoView({ behavior: "smooth", block: "start" }) : window.location.assign("/api/spotify/connect")} className="group flex min-h-60 flex-col rounded-3xl border border-lime-300 bg-lime-50 p-6 text-left transition hover:border-lime-500 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lime-700 disabled:opacity-60">
-        <Radio aria-hidden="true" className="mb-7 size-9 text-green-700" />
-        <span className="text-xl font-semibold">Spotify</span>
-        <span className="mt-2 text-sm leading-6 text-zinc-600">Your liked songs and handpicked playlists, in step with you.</span>
-        <span className="mt-auto flex items-center gap-2 pt-6 text-sm font-semibold text-green-800">{!loaded ? "Checking connection…" : account ? "Connected · Choose music" : !configured ? "Setup pending" : "Connect Spotify"}<ArrowUpRight aria-hidden="true" className="size-4" /></span>
-      </button>
-      {[{ name: "Apple Music", Icon: Music2, color: "text-rose-500", description: "Bring your Apple Music library along for the run." }, { name: "SoundCloud", Icon: Cloud, color: "text-orange-500", description: "Find your rhythm with independent tracks and mixes." }].map(({ name, Icon, color, description }) => <div key={name} className="flex min-h-60 flex-col rounded-3xl border border-zinc-200 bg-white p-6">
-        <Icon aria-hidden="true" className={`mb-7 size-9 ${color}`} /><h2 className="text-xl font-semibold">{name}</h2><p className="mt-2 text-sm leading-6 text-zinc-500">{description}</p><span className="mt-auto pt-6 text-sm text-zinc-500">Coming soon</span>
-      </div>)}
-    </div>
+    <aside className="mb-6 rounded-2xl border border-lime-200 bg-lime-50 p-5 text-sm leading-6 text-lime-950">
+      <p className="font-semibold">Before you start</p>
+      <p className="mt-1">You’ll need Spotify Premium, your WHOOP nearby with Heart Rate Broadcast enabled, and a browser that supports Bluetooth. Keep this tab visible while the DJ runs.</p>
+      {loaded && !supported && <p role="status" className="mt-3 font-medium">Bluetooth isn’t available in this browser. Use a compatible Chrome or Edge browser on a device with Bluetooth. iPhone/Safari isn’t supported for live music.</p>}
+    </aside>
+    <ol aria-label="Music setup progress" className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {setupSteps.map(({ label, done }, index) => <li key={label} className={`flex min-h-12 items-center gap-2 rounded-xl border p-3 text-sm ${done ? "border-lime-200 bg-lime-50 text-lime-900" : "border-zinc-200 bg-white text-zinc-500"}`}><span>{done ? <Check size={16} aria-label="Complete" /> : index + 1}</span>{label}</li>)}
+    </ol>
     <section id="spotify-library" className="space-y-6 rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8">
-    <div><h2 className="text-xl font-semibold">Your music. Your live rhythm.</h2><p className="mt-2 text-sm leading-6 text-zinc-600">About 15 seconds before each song ends, we choose your closest BPM match and queue it in Spotify. The current song finishes naturally.</p></div>
+    <div><Radio className="mb-4 text-green-700" /><h2 className="text-xl font-semibold">Your music. Your live rhythm.</h2><p className="mt-2 text-sm leading-6 text-zinc-600">About 15 seconds before each song ends, we choose your closest BPM match and queue it in Spotify. The current song finishes naturally.</p></div>
     {!loaded ? <p role="status">Checking Spotify connection…</p> : !account ? <div className="space-y-3">
       {configured ? <button className={`${button} inline-block bg-lime-200`} onClick={() => window.location.assign("/api/spotify/connect")}>Connect Spotify</button> : <p className="text-sm text-amber-800">Spotify connection is not available yet. Please try again once setup is complete.</p>}
       <p className="text-sm text-zinc-500">Spotify Premium is required to control playback.</p>
     </div> : <>
       <div className="flex flex-wrap items-center gap-3"><span className="text-sm">Connected as {account.name}</span><button className={button} disabled={busy} onClick={() => void disconnect()}>Disconnect Spotify</button></div>
-      <div className="space-y-4">
-        <h3 className="font-medium">1. Choose your music</h3>
+      <details open={matched.length < 2} className="space-y-4 rounded-2xl border border-zinc-200 p-4">
+        <summary className="min-h-11 cursor-pointer content-center font-medium">2. Choose your music · {matched.length} songs ready</summary>
         <p className="text-sm text-zinc-600">Import all your liked songs and any playlists you select. Duplicate songs are only added once. Each import replaces your previous selection on this browser.</p>
         <label className="flex items-center gap-3 rounded-xl border border-zinc-200 p-4"><input type="checkbox" checked={includeLiked} disabled={busy || running} onChange={e => setIncludeLiked(e.target.checked)} className="size-4 accent-green-700" /><span className="text-sm font-medium">All Liked Songs</span></label>
         <fieldset disabled={busy || running} className="space-y-3">
@@ -254,11 +260,12 @@ export function SpotifyDj() {
         </fieldset>
         <p className="text-sm text-zinc-600">{tracks.length} imported songs · {matched.length} ready for BPM matching. Saved on this browser for up to seven days.</p>
         <div className="flex flex-wrap gap-2"><button className={`${button} bg-lime-200`} disabled={busy || running || (!includeLiked && !selectedPlaylists.length)} onClick={() => void importLibrary()}>{importing ? "Importing…" : "Import selected music"}</button>{importing && <button className={button} onClick={() => importController.current?.abort()}>Cancel import</button>}</div>
-      </div>
-      <div className="space-y-3"><h3 className="font-medium">2. Connect live heart rate</h3><p className="text-sm text-zinc-600">Enable Heart Rate Broadcast in WHOOP, then select your band. Keep this tab visible during playback.</p>{!supported && <p className="text-sm text-amber-800">Web Bluetooth is unavailable here. Use a supported Chrome or Edge browser; iPhone/Safari requires a future native bridge.</p>}<button className={button} disabled={!supported || busy || running} onClick={() => void connectSensor()}>{sensor ? `Reconnect ${sensor}` : "Connect WHOOP Bluetooth"}</button><p className="text-2xl font-semibold" aria-live="polite">{hr === null ? "Waiting for live heart rate" : `${Math.round(hr)} BPM`}</p></div>
-      <div className="space-y-3"><h3 className="font-medium">3. Start listening</h3><p className="text-sm text-zinc-600">Open Spotify on your playback device. Clear its queue and turn off shuffle, repeat, autoplay, and crossfade. Play one song there, or choose your first song below.</p>
+      </details>
+      <div className="space-y-3"><h3 className="font-medium">3. Pair your WHOOP</h3><p className="text-sm text-zinc-600">Enable Heart Rate Broadcast in WHOOP, then select your band. Keep this tab visible during playback.</p>{!supported && <p className="text-sm text-amber-800">Web Bluetooth is unavailable here. Use a supported Chrome or Edge browser; iPhone/Safari requires a future native bridge.</p>}<button className={button} disabled={!supported || busy || running} onClick={() => void connectSensor()}>{sensor ? `Reconnect ${sensor}` : "Connect WHOOP Bluetooth"}</button><p className="text-2xl font-semibold" aria-live="polite">{hr === null ? "Waiting for live heart rate" : `${Math.round(hr)} BPM`}</p></div>
+      <div className="space-y-3"><h3 className="font-medium">4. Start listening</h3><p className="text-sm text-zinc-600">Open Spotify on your playback device. Clear its queue and turn off shuffle, repeat, autoplay, and crossfade. Play one song there, or choose your first song below.</p>
         <div className="flex flex-wrap gap-2"><select aria-label="First song" className="min-w-0 max-w-full rounded-xl border p-2 text-sm" value={first} disabled={running || busy} onChange={e => setFirst(e.target.value)}><option value="">Choose first song</option>{matched.map(t => <option key={t.id} value={t.id}>{t.name} — {t.artists.map(a => a.name).join(", ")} ({Math.round(t.bpm!)} BPM)</option>)}</select><button className={button} disabled={!first || busy || running} onClick={() => void playFirst()}>Play song</button></div>
-        <div className="flex flex-wrap gap-2"><button className={`${button} bg-lime-200`} disabled={running || busy || matched.length < 2 || hr === null} onClick={() => void start()}>Start live DJ</button><button className={button} disabled={!running} onClick={() => { stop(); setMessage("DJ stopped. An already queued song will still play."); }}>Stop DJ</button><button className={button} disabled={busy} onClick={() => { stop(); void api("pause", {}).catch(e => setError(e.message)); }}>Pause Spotify</button></div>
+        <div className="flex flex-wrap gap-2"><button aria-describedby="dj-start-help" className={`${button} bg-lime-200`} disabled={running || !!startBlocker} onClick={() => void start()}>Start live DJ</button><button className={button} disabled={!running} onClick={() => { stop(); setMessage("DJ stopped. An already queued song will still play."); }}>Stop DJ</button><button className={button} disabled={busy} onClick={() => { stop(); void api("pause", {}).catch(e => setError(e.message)); }}>Pause Spotify</button></div>
+        <p id="dj-start-help" role="status" className="text-sm text-zinc-600">{running ? "DJ is running. Keep this tab visible." : startBlocker ?? "Ready to start. Check that Spotify is playing on your chosen device with an empty queue."}</p>
       </div>
       {playback?.item && <div className="rounded-2xl bg-zinc-50 p-4"><p className="text-xs uppercase text-zinc-500">{playback.is_playing ? "Now playing on Spotify" : "Paused on Spotify"}</p><a href={`https://open.spotify.com/track/${playback.item.id}`} target="_blank" rel="noreferrer" className="font-medium underline">{playback.item.name} — {playback.item.artists.map(a => a.name).join(", ")}</a>{playback.item.album?.images[0] && <div className="mt-3">{/* Spotify artwork is displayed with its corresponding track. */}
         <Image unoptimized src={playback.item.album.images[0].url} alt={`${playback.item.name} cover`} width={96} height={96} className="rounded-lg" /></div>}</div>}
