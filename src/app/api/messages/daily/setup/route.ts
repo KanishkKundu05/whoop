@@ -52,7 +52,7 @@ async function withSession(action: (session: WhoopSession) => Promise<NextRespon
 export async function GET() {
   return withSession(async (session) => {
     const config = getDailySmsConfigStatus();
-    const subscription = config.missing.includes("NEXT_PUBLIC_CONVEX_URL")
+    const subscription = config.missing.some(key => ["NEXT_PUBLIC_CONVEX_URL", "WHOOP_SERVER_SECRET"].includes(key))
       ? null : await getDailySmsSubscriptionStatus(session.userId!);
     return json({ ok: true, connected: true, hasOfflineAccess: !!session.refreshToken, config, subscription });
   });

@@ -187,3 +187,15 @@ test('preview and delivered report share the configured greeting and formatter',
     else process.env.DAILY_MESSAGE_GREETING = oldGreeting;
   }
 });
+
+test('missing storage secret returns configuration guidance without querying storage', async () => {
+  const route = setupRoute({ storage: {
+    getDailySmsConfigStatus: () => ({ isReady: false, missing: ['WHOOP_SERVER_SECRET'] }),
+    getDailySmsSubscriptionStatus: () => assert.fail('storage cannot be queried without its secret'),
+  } });
+  const response = await route.GET();
+  assert.equal(response.status, 200);
+  const status = await response.json();
+  assert.equal(status.config.isReady, false);
+  assert.equal(status.subscription, null);
+});
