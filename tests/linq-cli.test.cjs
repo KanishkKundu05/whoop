@@ -111,3 +111,21 @@ test('CLI routing is explicit and invalid transport never falls back to a send',
   process.env.LINQ_TRANSPORT = 'typo';
   await assert.rejects(provider.sendLinqTextMessage(input), /must be api or cli/);
 });
+
+
+test('API records the nested message ID, delivery status, and per-message service', async t => {
+  env(t, { LINQ_TRANSPORT: 'api', LINQ_API_KEY: 'api-token' });
+  const oldFetch = global.fetch;
+  t.after(() => { global.fetch = oldFetch; });
+  const payload = {
+    chat_id: 'resolved-chat', service: 'iMessage',
+    message: { id: 'accepted-message', delivery_status: 'queued', service: 'SMS' },
+  };
+  global.fetch = async () => Response.json(payload);
+  const provider = load('src/lib/messages/linq.ts');
+  const result = await provider.sendLinqTextMessage({ to: '+14155552671', body: 'Hi', idempotencyKey: 'sleep-id' });
+  assert.equal(result.id, 'accepted-message');
+  assert.equal(result.status, 'queued');
+  assert.equal(result.chatId, 'resolved-chat');
+  assert.equal(result.service, 'SMS');
+});

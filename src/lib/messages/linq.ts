@@ -93,6 +93,8 @@ export async function sendLinqTextMessage({
   }
 
   const object = data && typeof data === "object" ? data : {};
+  const message = "message" in object && object.message && typeof object.message === "object"
+    ? object.message : {};
   const firstMessage =
     "messages" in object &&
     Array.isArray(object.messages) &&
@@ -103,16 +105,19 @@ export async function sendLinqTextMessage({
 
   return {
     id:
+      stringField("id" in message ? message.id : undefined) ??
       stringField("id" in object ? object.id : undefined) ??
       stringField("message_id" in object ? object.message_id : undefined) ??
       stringField("id" in firstMessage ? firstMessage.id : undefined),
     status:
+      stringField("delivery_status" in message ? message.delivery_status : undefined) ??
       stringField("status" in object ? object.status : undefined) ??
       stringField("status" in firstMessage ? firstMessage.status : undefined),
     chatId:
       stringField("chat_id" in object ? object.chat_id : undefined) ??
       stringField("chat_id" in firstMessage ? firstMessage.chat_id : undefined),
     service:
+      stringField("service" in message ? message.service : undefined) ??
       stringField("service" in object ? object.service : undefined) ??
       stringField("service" in firstMessage ? firstMessage.service : undefined),
     raw: data,
