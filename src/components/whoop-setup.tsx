@@ -217,7 +217,7 @@ export function WhoopSetup({ authError }: { authError?: string }) {
             <p className={styles.eyebrow}>THREE CHECKS. ALL CONNECTED.</p>
             <h2 tabIndex={-1}>You’re in rhythm.</h2>
             <p>Your account is connected, your sleep data is accessible, and a signed sleep update has arrived from WHOOP.</p>
-            <div className={styles.nextUp}><span>UP NEXT / OPTIONAL</span><h3>Make mornings a little closer.</h3><p>Set up Linq delivery and choose who gets your morning sleep report.</p><Link href="/setup" className={button}>Set up morning texts<ArrowRight size={17} /></Link></div>
+            <div className={styles.nextUp}><span>UP NEXT / OPTIONAL</span><h3>Make mornings a little closer.</h3><p>Set up Linq delivery and choose who gets your morning sleep report.</p><Link href="/morning" className={button}>Set up morning texts<ArrowRight size={17} /></Link></div>
             <Link href="/whoop" className={styles.textLink}>Explore WHOOP experiences<ArrowUpRight size={16} /></Link>
           </section>}
           {step < 3 && <div className={styles.actions}>

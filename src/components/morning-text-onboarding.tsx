@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowLeft, ArrowRight, Check, CheckCircle2, Copy, LoaderCircle, MessageCircle, Moon, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { ArrowRight, Check, CheckCircle2, Copy, LoaderCircle, MessageCircle, ShieldCheck } from "lucide-react";
 import { primaryAction, secondaryAction } from "@/components/onboarding-shell";
 import { normalizeE164Phone } from "@/lib/messages/template";
 
-const steps = ["Preview", "Recipient", "Enable"];
+const steps = [{ label: "Recipient", index: 1 }, { label: "Enable", index: 2 }];
 const stepNames = ["report", "recipient", "review", "complete"];
 type Subscription = { active: boolean; recipientPhoneLast4: string; lastSentAt?: string; lastError?: string };
 type Status = {
@@ -36,8 +36,11 @@ async function requestSettings(method = "GET", recipientPhone?: string, signal?:
   return data;
 }
 
+const subscribeToOrigin = () => () => {};
+
 function DeliveryDetails({ missing, onError }: { missing: string[]; onError: (message: string) => void }) {
     const [copied, setCopied] = useState(false);
+    const origin = useSyncExternalStore(subscribeToOrigin, () => window.location.origin, () => "Your app’s public origin");
     return <details className="mt-5 rounded-xl border border-zinc-200 p-4 text-sm">
       <summary className="cursor-pointer font-medium text-zinc-700">App owner · Delivery configuration</summary>
       <div className="mt-4 space-y-4 text-sm leading-6 text-zinc-600">
@@ -45,7 +48,7 @@ function DeliveryDetails({ missing, onError }: { missing: string[]; onError: (me
         <p>For local CLI testing, set <code>LINQ_TRANSPORT=cli</code> and log in with <code>linq login</code> or <code>linq signup</code>. Select a default sending line and have the recipient text it first. CLI mode requires the development server; its configuration check does not verify CLI login.</p>
         {!!missing.length && <p className="break-words text-amber-800">Missing or invalid: {missing.join(", ")}.</p>}
         <p>In WHOOP developer settings, register the public HTTPS URL below as the <strong>v2 webhook</strong>. Replace the connection-test webhook when you’re ready to enable delivery.</p>
-        <div className="flex items-center gap-3 rounded-lg bg-zinc-50 p-3"><code className="min-w-0 flex-1 break-all text-xs">{typeof window !== "undefined" ? window.location.origin : "Your app’s public origin"}/api/whoop/webhook</code><button type="button" aria-label="Copy delivery webhook URL" className="shrink-0 rounded-lg p-2 hover:bg-zinc-200" onClick={async () => {
+        <div className="flex items-center gap-3 rounded-lg bg-zinc-50 p-3"><code className="min-w-0 flex-1 break-all text-xs">{origin}/api/whoop/webhook</code><button type="button" aria-label="Copy delivery webhook URL" className="shrink-0 rounded-lg p-2 hover:bg-zinc-200" onClick={async () => {
           try { await navigator.clipboard.writeText(`${window.location.origin}/api/whoop/webhook`); setCopied(true); }
           catch { onError("Clipboard unavailable. Select the webhook URL and copy it manually."); }
         }}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div>
@@ -57,7 +60,7 @@ function DeliveryDetails({ missing, onError }: { missing: string[]; onError: (me
 
 
 export function MorningTextOnboarding({ requestedStep, preview }: {
-  requestedStep?: string; preview: string; greeting: string;
+  requestedStep?: string; preview: string;
 }) {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<Status | null>(null);
@@ -71,13 +74,13 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
   const heading = useRef<HTMLHeadingElement>(null);
   const phoneInput = useRef<HTMLInputElement>(null);
   const mutationInFlight = useRef(false);
-  const ready = !!status?.config?.isReady && !!status?.hasOfflineAccess;
+  const ready = !loading && !!status?.connected && !!status?.config?.isReady && !!status?.hasOfflineAccess;
   const active = !!status?.subscription?.active;
   const requestedIndex = stepNames.indexOf(searchParams.get("step") ?? requestedStep ?? "");
   // Completion always comes from the server. A reload cannot restore an unsaved recipient.
-  const step = requestedIndex === 3 ? (active ? 3 : 0)
+  const step = requestedIndex === 3 ? (active ? 3 : 1)
     : requestedIndex === 2 ? (phone && consent ? 2 : 1)
-    : requestedIndex >= 0 ? requestedIndex : active ? 3 : 0;
+    : requestedIndex >= 0 ? 1 : active ? 3 : 1;
   const busy = pending;
 
   async function refresh(signal?: AbortSignal) {
@@ -105,7 +108,7 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
   function goTo(index: number) {
     setError(null); setNotice(null);
     // Step changes stay local so the unsaved recipient survives Back/Continue.
-    window.history.pushState(null, "", `/setup?step=${stepNames[index]}`);
+    window.history.pushState(null, "", `/morning?step=${stepNames[index]}`);
   }
 
   function review(event: FormEvent<HTMLFormElement>) {
@@ -135,38 +138,35 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
       const result = await requestSettings("DELETE");
       if (result.connected === false) { setStatus(result); return; }
       setStatus(current => ({ ...current!, subscription: current?.subscription ? { ...current.subscription, active: false } : null }));
-      goTo(0); setNotice("Morning texts are off. You can enable them again whenever you’re ready.");
+      goTo(1); setNotice("Morning texts are off. You can enable them again whenever you’re ready.");
     } catch (error) { setError(error instanceof Error ? error.message : "Couldn’t turn off messages."); }
     finally { mutationInFlight.current = false; setPending(false); }
   }
 
   return <>
     <header className="mb-7"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-lime-800">WHOOP · Morning texts</p><h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">A better way to say good morning.</h1><p className="mt-3 text-sm leading-6 text-zinc-500">A small sleep update, sent to someone who matters.</p></header>
-    <ol aria-label="Setup progress" className="mb-6 grid grid-cols-3 gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
-      {steps.map((label, index) => <li key={label}><button type="button" disabled={loading || busy || index > step || step === 3} onClick={() => goTo(index)} aria-current={index === step ? "step" : undefined} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium ${index === step ? "bg-lime-100 text-lime-950" : "text-zinc-500"}`}><span>{index < step ? <Check size={16} /> : index + 1}</span>{label}</button></li>)}
+    <ol aria-label="Setup progress" className="mb-6 grid grid-cols-2 gap-2 rounded-2xl border border-zinc-200 bg-white p-3">
+      {steps.map(({ label, index }) => <li key={label}><button type="button" disabled={loading || busy || index > step || step === 3} onClick={() => goTo(index)} aria-current={index === step ? "step" : undefined} className={`flex min-h-12 w-full items-center justify-center gap-2 rounded-xl text-sm font-medium ${index === step ? "bg-lime-100 text-lime-950" : "text-zinc-500"}`}><span>{index < step ? <Check size={16} /> : index}</span>{label}</button></li>)}
     </ol>
     {error && <div role="alert" className="mb-5 rounded-xl bg-rose-50 p-4 text-sm leading-6 text-rose-900">{error}<button type="button" disabled={busy || loading} onClick={reload} className="ml-3 underline">Refresh status</button></div>}
     {notice && <p role="status" className="mb-5 rounded-xl bg-lime-50 p-4 text-sm text-lime-900">{notice}</p>}
-    {loading ? <div role="status" className="flex min-h-60 items-center justify-center gap-3 rounded-3xl border border-zinc-200 bg-white p-8 text-sm text-zinc-500"><LoaderCircle size={20} className="animate-spin" />Checking connection and delivery…</div> : status && <section aria-busy={busy} className="rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8">
-      {!status.connected ? <><ShieldCheck className="text-lime-700" /><h2 ref={heading} tabIndex={-1} className="mt-4 text-2xl font-semibold">Reconnect your WHOOP.</h2><p className="mt-3 text-sm text-zinc-500">Your session ended. Reconnect to continue your setup.</p><a href="/api/auth/whoop?next=/setup" className={`${primaryAction} mt-6`}>Reconnect WHOOP</a></> : <>
-        <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-900">{step === 3 ? <CheckCircle2 /> : step === 0 ? <Moon /> : <MessageCircle />}</span>
+    {loading && <p role="status" className="mb-5 flex items-center gap-3 text-sm text-zinc-500"><LoaderCircle size={20} className="animate-spin" />Checking connection and delivery…</p>}
+    <section aria-busy={busy} className="rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8">
+      {status?.connected === false && <div className="mb-6 rounded-xl bg-lime-50 p-4"><ShieldCheck className="text-lime-700" /><p className="mt-3 text-sm text-zinc-600">Connect WHOOP to save your recipient and enable automatic sleep reports.</p><a href="/api/auth/whoop?next=/morning" className={`${primaryAction} mt-4`}>Connect WHOOP</a></div>}
+        <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-900">{step === 3 ? <CheckCircle2 /> : <MessageCircle />}</span>
         <h2 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">{["Here’s what they’ll receive.", "Who gets your morning update?", "Ready to enable morning texts?", "Morning texts are enabled."][step]}</h2>
-        {!ready && <div role="status" className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900"><p className="font-semibold">Delivery setup pending</p><p>You can preview your report now. The app owner needs to finish delivery setup before you can enable texts.</p>{status.hasOfflineAccess === false && <a href="/api/auth/whoop?next=/setup" className="block underline">Reconnect WHOOP to allow automatic reports</a>}<button type="button" onClick={reload} className="mt-2 min-h-11 underline">Check again</button></div>}
-        {step === 0 && <>
-          <p className="mt-4 text-sm leading-7 text-zinc-500">Wake time, time asleep, and bedtime, using the timezone recorded by WHOOP. Reports follow a processed main-sleep update; there’s no fixed send time.</p>
-          <div className="mt-6 rounded-2xl bg-zinc-50 p-5"><p className="mb-3 text-xs text-zinc-500">Example message · sample sleep data</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-lime-200 p-5 text-sm leading-7 text-lime-950">{preview}</p></div>
-          <p className="mt-4 text-xs leading-6 text-zinc-500">The greeting is configured by the app owner. You choose who receives it.</p>
-          <button type="button" disabled={busy} onClick={() => goTo(1)} className={`${primaryAction} mt-6`}>Choose recipient<ArrowRight size={17} /></button>
-        </>}
+        {!loading && status?.connected && !ready && <div role="status" className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900"><p className="font-semibold">Delivery setup pending</p><p>You can preview your report now. The app owner needs to finish delivery setup before you can enable texts.</p>{status?.hasOfflineAccess === false && <a href="/api/auth/whoop?next=/morning" className="block underline">Reconnect WHOOP to allow automatic reports</a>}<button type="button" onClick={reload} className="mt-2 min-h-11 underline">Check again</button></div>}
+        <div className="mt-6 rounded-2xl bg-zinc-50 p-5"><p className="mb-3 text-xs text-zinc-500">Message template · sample sleep data</p><p className="whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-lime-200 p-5 text-sm leading-7 text-lime-950">{preview}</p></div>
+        <p className="mt-4 text-xs leading-6 text-zinc-500">Wake time, time asleep, and bedtime use the timezone recorded by WHOOP. The app owner sets the greeting. Reports follow a processed main sleep; there’s no fixed send time.</p>
         {step === 1 && <form className="mt-4" onSubmit={review}>
           <p className="text-sm leading-7 text-zinc-500">They don’t need a WHOOP account. Nothing is enabled until you confirm on the next screen.</p>
-          {status.subscription && <p className="mt-4 text-sm text-zinc-600">{active ? "Currently sending to" : "Previously saved number"}: •••• {status.subscription.recipientPhoneLast4}.</p>}
+          {status?.subscription && <p className="mt-4 text-sm text-zinc-600">{active ? "Currently sending to" : "Previously saved number"}: •••• {status?.subscription.recipientPhoneLast4}.</p>}
           <label htmlFor="recipient-phone" className="mb-2 mt-6 block text-sm font-semibold">Recipient phone number</label>
           <input ref={phoneInput} id="recipient-phone" name="recipientPhone" type="tel" autoComplete="tel" inputMode="tel" required disabled={busy} value={phone} onChange={event => { setPhone(event.target.value); setPhoneError(null); }} placeholder="+1 415 555 2671" aria-invalid={!!phoneError} aria-describedby={phoneError ? "phone-error phone-help" : "phone-help"} className="min-h-14 w-full rounded-xl border border-zinc-300 bg-white px-4 text-base focus:outline-lime-600" />
           <p id="phone-help" className="mt-2 text-xs leading-6 text-zinc-500">Include + and the country code. Spaces, parentheses, and dashes are fine.</p>
           {phoneError && <p id="phone-error" role="alert" className="mt-2 text-sm text-rose-700">{phoneError}</p>}
           <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl bg-zinc-50 p-4 text-sm leading-6 text-zinc-600"><input type="checkbox" required checked={consent} disabled={busy} onChange={event => setConsent(event.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-lime-700" />I want to share my sleep report with this person and they’re happy to receive these texts.</label>
-          <div className="mt-7 flex flex-wrap justify-between gap-3"><button type="button" disabled={busy} className={secondaryAction} onClick={() => goTo(0)}><ArrowLeft size={17} />Back</button><button disabled={busy || !phone.trim() || !consent} className={primaryAction}>Review<ArrowRight size={17} /></button></div>
+          <div className="mt-7 flex flex-wrap justify-between gap-3"><button disabled={busy || !phone.trim() || !consent} className={primaryAction}>Review<ArrowRight size={17} /></button></div>
         </form>}
         {step === 2 && <>
           <p className="mt-4 text-sm leading-7 text-zinc-600">Send automatic sleep reports to <strong className="break-all">{phone}</strong>.</p>
@@ -174,15 +174,14 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
           <div className="mt-7 flex flex-wrap justify-between gap-3"><button type="button" disabled={busy} className={secondaryAction} onClick={() => goTo(1)}>Edit recipient</button><button type="button" disabled={busy || !ready} className={primaryAction} onClick={() => void save()}>{pending ? <LoaderCircle size={17} className="animate-spin" /> : <Check size={17} />}{active ? "Save recipient" : "Enable morning texts"}</button></div>
         </>}
         {step === 3 && <>
-          <p className="mt-4 text-sm leading-7 text-zinc-500">Your reports are set to go to the number ending in <strong className="text-zinc-900">{status.subscription?.recipientPhoneLast4}</strong>.</p>
-          <div className="mt-6 rounded-2xl bg-lime-50 p-5 text-sm leading-7 text-lime-950"><p className="font-semibold">{status.subscription?.lastSentAt ? "Report requested" : "Waiting for first sleep update"}</p><p className="mt-1">{status.subscription?.lastSentAt ? `Last requested: ${new Date(status.subscription.lastSentAt).toLocaleString()}. Check the recipient’s phone to confirm delivery.` : "Once WHOOP processes your main sleep and notifies this app, we’ll request your report through Linq. You don’t need to keep this page open."}</p></div>
-          {status.subscription?.lastError && <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The last delivery attempt had a problem. Check delivery configuration, then refresh status.</p>}
+          <p className="mt-4 text-sm leading-7 text-zinc-500">Your reports are set to go to the number ending in <strong className="text-zinc-900">{status?.subscription?.recipientPhoneLast4}</strong>.</p>
+          <div className="mt-6 rounded-2xl bg-lime-50 p-5 text-sm leading-7 text-lime-950"><p className="font-semibold">{status?.subscription?.lastSentAt ? "Report requested" : "Waiting for first sleep update"}</p><p className="mt-1">{status?.subscription?.lastSentAt ? `Last requested: ${new Date(status?.subscription.lastSentAt).toLocaleString()}. Check the recipient’s phone to confirm delivery.` : "Once WHOOP processes your main sleep and notifies this app, we’ll request your report through Linq. You don’t need to keep this page open."}</p></div>
+          {status?.subscription?.lastError && <p role="alert" className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">The last delivery attempt had a problem. Check delivery configuration, then refresh status.</p>}
           <div className="mt-7 flex flex-wrap gap-3"><Link href="/dashboard" className={primaryAction}>Back to overview<ArrowRight size={17} /></Link><button type="button" disabled={busy} className={secondaryAction} onClick={() => goTo(1)}>Change recipient</button></div>
           <button type="button" disabled={busy} className="mt-4 min-h-11 text-sm underline" onClick={reload}>Refresh delivery status</button>
         </>}
         {active && <button type="button" disabled={busy} className="mt-4 block min-h-11 text-sm text-rose-700 underline" onClick={() => void turnOff()}>Turn off morning texts</button>}
-        {(!ready || status.subscription?.lastError) && <DeliveryDetails missing={status.config?.missing ?? []} onError={setError} />}
-      </>}
-    </section>}
+    </section>
+    <DeliveryDetails missing={status?.config?.missing ?? []} onError={setError} />
   </>;
 }
