@@ -66,7 +66,10 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
       const next = await requestSettings("GET", undefined, signal);
       if (!signal?.aborted) setStatus(next);
     } catch (error) {
-      if (!signal?.aborted) setError(error instanceof Error ? error.message : "Please try again.");
+      if (!signal?.aborted) {
+        setStatus(null);
+        setError(error instanceof Error ? error.message : "Please try again.");
+      }
     } finally { if (!signal?.aborted) setLoading(false); }
   }
 
