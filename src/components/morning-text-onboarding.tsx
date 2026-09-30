@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
-import { ArrowRight, Check, CheckCircle2, Copy, LoaderCircle, MessageCircle, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { ArrowRight, Check, CheckCircle2, LoaderCircle, MessageCircle, ShieldCheck } from "lucide-react";
 import { primaryAction, secondaryAction } from "@/components/onboarding-shell";
+import { DeliveryConfiguration } from "@/components/delivery-configuration";
 import { normalizeE164Phone } from "@/lib/messages/template";
 
 const steps = [{ label: "Recipient", index: 1 }, { label: "Enable", index: 2 }];
@@ -35,29 +36,6 @@ async function requestSettings(method = "GET", recipientPhone?: string, signal?:
   if (!response.ok || !data.ok) throw new Error(data.error || "We couldn’t update messaging setup. Please try again.");
   return data;
 }
-
-const subscribeToOrigin = () => () => {};
-
-function DeliveryDetails({ missing, onError }: { missing: string[]; onError: (message: string) => void }) {
-    const [copied, setCopied] = useState(false);
-    const origin = useSyncExternalStore(subscribeToOrigin, () => window.location.origin, () => "Your app’s public origin");
-    return <details className="mt-5 rounded-xl border border-zinc-200 p-4 text-sm">
-      <summary className="cursor-pointer font-medium text-zinc-700">App owner · Delivery configuration</summary>
-      <div className="mt-4 space-y-4 text-sm leading-6 text-zinc-600">
-        <p>Configure a sending line in Linq, and set <code>LINQ_API_KEY</code> on this app’s server. Set <code>DAILY_MESSAGE_SECRET</code> to at least 32 characters and <code>NEXT_PUBLIC_CONVEX_URL</code> to your Convex deployment. Set the same 32+ character <code>WHOOP_SERVER_SECRET</code> in the app and Convex. Deploy its functions, then restart or redeploy the app.</p>
-        <p>For local CLI testing, set <code>LINQ_TRANSPORT=cli</code> and log in with <code>linq login</code> or <code>linq signup</code>. Select a default sending line and have the recipient text it first. CLI mode requires the development server; its configuration check does not verify CLI login.</p>
-        {!!missing.length && <p className="break-words text-amber-800">Missing or invalid: {missing.join(", ")}.</p>}
-        <p>In WHOOP developer settings, register the public HTTPS URL below as the <strong>v2 webhook</strong>. Replace the connection-test webhook when you’re ready to enable delivery.</p>
-        <div className="flex items-center gap-3 rounded-lg bg-zinc-50 p-3"><code className="min-w-0 flex-1 break-all text-xs">{origin}/api/whoop/webhook</code><button type="button" aria-label="Copy delivery webhook URL" className="shrink-0 rounded-lg p-2 hover:bg-zinc-200" onClick={async () => {
-          try { await navigator.clipboard.writeText(`${window.location.origin}/api/whoop/webhook`); setCopied(true); }
-          catch { onError("Clipboard unavailable. Select the webhook URL and copy it manually."); }
-        }}>{copied ? <Check size={17} /> : <Copy size={17} />}</button></div>
-        <p>Configuration checks do not verify your Linq token, sending line, or webhook registration. Confirm the first report arrives on the recipient’s phone.</p>
-        <Link href="/setup/connection" className="inline-block underline underline-offset-4">Manage WHOOP account</Link>
-      </div>
-    </details>;
-  }
-
 
 export function MorningTextOnboarding({ requestedStep, preview }: {
   requestedStep?: string; preview: string;
@@ -182,6 +160,6 @@ export function MorningTextOnboarding({ requestedStep, preview }: {
         </>}
         {active && <button type="button" disabled={busy} className="mt-4 block min-h-11 text-sm text-rose-700 underline" onClick={() => void turnOff()}>Turn off morning texts</button>}
     </section>
-    <DeliveryDetails missing={status?.config?.missing ?? []} onError={setError} />
+    <DeliveryConfiguration missing={status?.config?.missing ?? []} onError={setError} />
   </>;
 }

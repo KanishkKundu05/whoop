@@ -1,8 +1,8 @@
 # Local messaging with Linq CLI
 
-This checkout already sends with Linq REST; it contains no Twilio or sandbox
-implementation. The optional CLI transport exercises the same sleep-report flow
-locally. Existing REST delivery remains the default; no Twilio code is removed.
+The optional CLI transport runs the same sleep-report flow as the production REST
+adapter. Configure the [WHOOP webhook and storage](whoop-linq-personal-setup.md),
+then open `/morning` to choose the recipient and enable reports.
 
 ## Setup
 
@@ -29,7 +29,7 @@ LINQ_CLI_PATH=/absolute/path/from/which/linq
 ```
 
 CLI mode uses the logged-in CLI profile and its default sending line. Use
-`linq phonenumbers set` if necessary. `LINQ_PROFILE` selects a profile;
+`linq profile set fromPhone +YOUR_LINQ_NUMBER` if necessary. `LINQ_PROFILE` selects a profile;
 `LINQ_FROM_PHONE` overrides the sender. If `LINQ_API_KEY` is set, the adapter passes
 it as `LINQ_TOKEN`, overriding the profile token. Remove an old placeholder key
 before using profile authentication. The key is never passed as a command argument.

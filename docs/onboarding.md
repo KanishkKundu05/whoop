@@ -11,10 +11,11 @@ Account. Returning users can open their dashboard directly from the landing page
 | `/dashboard` | Authenticated overview, trends, feature statuses, deeper health details |
 | `/whoop` | Compatibility redirect to Overview; auth errors go to Account |
 | `/whoop/music` | Spotify setup and live DJ |
-| `/setup` | Morning-text preview, recipient, confirmation, saved status |
+| `/morning` | Public template and recipient form; authenticated activation and saved status |
+| `/setup` | Compatibility redirect to `/morning`, preserving the step |
 | `/setup/connection` | Visitor connection, latest sleep, account controls |
 | `/admin/whoop` | Owner-only API and signed webhook diagnostic wizard |
-| `/daily-message` | Compatibility redirect to `/setup` |
+| `/daily-message` | Compatibility redirect to `/morning` |
 
 OAuth defaults to Overview. Account switches return there too. The dashboard
 refresh link retains the selected date range. Anonymous dashboard visitors see the
@@ -29,11 +30,13 @@ real playback, delivery, and settings.
 
 Connection and server configuration are checked automatically. The visible flow is:
 
-1. **Preview:** show the production formatter with sample sleep values.
-2. **Recipient:** normalize an international number and acknowledge sharing consent.
-3. **Enable:** review the number and explicitly save/activate the subscription.
+1. **Recipient:** show the production formatter with sample sleep values alongside
+   the phone input; normalize an international number and acknowledge sharing consent.
+2. **Enable:** review the number and explicitly save/activate the subscription.
 
-Incomplete delivery configuration does not block the preview, but activation is
+Loading, failed status requests, and missing authentication do not hide the form,
+template, or app-owner configuration. Incomplete delivery configuration does not
+block the preview, but activation is
 disabled with an explanation. Technical instructions stay under app-owner details.
 Completion is read from the server, never trusted from `?step=complete`. The recipient
 draft survives in-app Back/Continue but is not persisted to browser storage; reloading
